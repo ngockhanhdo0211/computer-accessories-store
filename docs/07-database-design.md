@@ -58,7 +58,7 @@ erDiagram
 
 | Bảng và mục đích | Cột riêng (ngoài `id`, timestamps chung) | Khóa/ràng buộc, xóa và snapshot |
 | --- | --- | --- |
-| `users` — tài khoản, mở rộng migration Laravel | Giữ `name VARCHAR(255)!`, `email VARCHAR(255)!`, `email_verified_at TIMESTAMP?`, `password VARCHAR(255)!`, `remember_token VARCHAR(100)?`, `created_at TIMESTAMP?`, `updated_at TIMESTAMP?` đúng migration Laravel hiện có; thêm `phone VARCHAR(20)?`, `gender VARCHAR(3)?`, `dob DATE?`, `address TEXT?`, `role VARCHAR(16)!=customer`, `status VARCHAR(16)!=active`, `current_tier VARCHAR(16)!=dong`, `membership_spending BIGINT UNSIGNED!=0`, `last_login_at TIMESTAMP?`, `must_change_password BOOLEAN!=0`. Tên `current_tier` giữ theo thiết kế này thay cho `membership_level` trong yêu cầu slice. | `UQ(email)` sẵn có, thêm `UQ(phone)`; index role/status/current_tier. Gender chỉ `nam`/`nu`, ngày sinh không ở tương lai kiểm tra tại ứng dụng; spending không âm. Slice đăng ký dùng enum cast, default và validation ứng dụng; Migration dự kiến `add_user_domain_checks_to_users_table` sẽ bổ sung CHECK role/status/current_tier, gender, membership_spending và must_change_password; chưa có trong slice này. Không tự đăng ký employee/admin; không khóa/hạ quyền admin cuối dưới khóa hàng admin. Không hard delete khi đã phát sinh dữ liệu. `current_tier` là projection, role không liên quan tier. |
+| `users` — tài khoản, mở rộng migration Laravel | Giữ `name VARCHAR(255)!`, `email VARCHAR(255)!`, `email_verified_at TIMESTAMP?`, `password VARCHAR(255)!`, `remember_token VARCHAR(100)?`, `created_at TIMESTAMP?`, `updated_at TIMESTAMP?` đúng migration Laravel hiện có; thêm `phone VARCHAR(20)?`, `gender VARCHAR(3)?`, `dob DATE?`, `address TEXT?`, `role VARCHAR(16)!=customer`, `status VARCHAR(16)!=active`, `current_tier VARCHAR(16)!=dong`, `membership_spending BIGINT UNSIGNED!=0`, `last_login_at TIMESTAMP?`, `must_change_password BOOLEAN!=0`. Tên `current_tier` giữ theo thiết kế này thay cho `membership_level` trong yêu cầu slice. | `UQ(email)` sẵn có, thêm `UQ(phone)`; index role/status/current_tier. Gender chỉ `nam`/`nu`, ngày sinh không ở tương lai kiểm tra tại ứng dụng; spending không âm. Slice đăng ký dùng enum cast, default và validation ứng dụng; migration `add_user_domain_checks_to_users_table` đã bổ sung sáu CHECK role/status/current_tier, gender, membership_spending và must_change_password. Không tự đăng ký employee/admin; không khóa/hạ quyền admin cuối dưới khóa hàng admin. Không hard delete khi đã phát sinh dữ liệu. `current_tier` là projection, role không liên quan tier. |
 | `membership_histories` — lịch sử tự tính hạng | `user_id BIGINT!`, `old_tier VARCHAR(16)?`, `new_tier VARCHAR(16)!`, `spending_vnd BIGINT UNSIGNED!`, `reason VARCHAR(40)!`, `requested_by BIGINT?` (admin yêu cầu tính lại), `created_at` chung; không `updated_at`. | FK user RESTRICT, actor SET NULL. Bất biến: tier hợp lệ, spending ≥0. Chỉ append, không soft/hard delete. `spending_vnd` là snapshot căn cứ lần tính. |
 | `audit_logs` — thao tác nhạy cảm | `actor_id BIGINT?` (NULL cho hệ thống), `action VARCHAR(80)!`, `subject_type VARCHAR(80)!`, `subject_id BIGINT?`, `before_json JSON?`, `after_json JSON?`, `request_id CHAR(36)?`, `created_at` chung; không `updated_at`. | FK actor SET NULL; không FK đa hình subject. JSON loại bỏ password, token, bí mật cổng và dữ liệu thanh toán thô. Append only; không soft delete. Snapshot chỉ dữ liệu cần truy vết. |
 | `categories` — danh mục động | `parent_id BIGINT?`, `name VARCHAR(255)!`, `slug VARCHAR(255)!`, `is_visible BOOLEAN!=1`, `created_at`, `updated_at`. | `UQ(slug)` toàn bảng, FK parent RESTRICT, `parent_id != id` và kiểm tra toàn bộ chu trình trong transaction. Ẩn thay xóa khi có liên kết/lịch sử; product dưới category ẩn ngừng hiển thị/bán. Không soft delete để trạng thái ẩn rõ ràng. |
@@ -193,6 +193,23 @@ Chỉ thêm index khi phục vụ truy vấn đã nêu. Giới hạn index trên
 | Không xóa; chuyển trạng thái có audit | `coupon_usages`: reserved → consumed/released; consumed → released khi hủy COD hoặc full refund VNPay thành công; released do hết hạn → consumed chỉ với callback muộn hợp lệ và còn hàng. |
 | Runtime Laravel | `sessions`, `password_reset_tokens` xóa khi logout/thu hồi/hết hạn; cache/queue theo Laravel. |
 | Tài khoản | `users` không hard delete sau khi có nghiệp vụ; dùng `inactive`. |
+
+## CHECK domain của `users` đã triển khai
+
+| Constraint | Biểu thức |
+| --- | --- |
+| `users_role_check` | `role IN ('customer','employee','admin')` |
+| `users_status_check` | `status IN ('active','locked','inactive')` |
+| `users_current_tier_check` | `current_tier IN ('dong','bac','vang','kim_cuong')` |
+| `users_gender_check` | `gender IS NULL OR gender IN ('nam','nu')` |
+| `users_membership_spending_check` | `membership_spending >= 0` |
+| `users_must_change_password_check` | `must_change_password IN (0,1)` |
+
+MariaDB 10.4.32 tạo sáu table CHECK có tên bằng một `ALTER TABLE ... ADD CONSTRAINT`, gỡ đúng chúng bằng `DROP CONSTRAINT`; các so sánh chuỗi dùng `BINARY` để giá trị khác chữ hoa/thường không lọt qua collation. Migration dùng query SQL trực tiếp với tên/biểu thức cố định để kiểm tra dữ liệu `users` trước DDL; hàng vi phạm làm migration dừng với tên constraint, không tự sửa dữ liệu hay đổi default. Mã đọc đúng cả chuỗi phiên bản MariaDB có tiền tố tương thích `5.5.5-`.
+
+`ALTER TABLE` trên MariaDB gây implicit commit, nên transaction của migration không thể đảo ngược DDL. Sáu constraint được thêm/gỡ trong một câu lệnh mỗi chiều để giảm nguy cơ trạng thái một phần. Nếu DDL đã thành công nhưng xác minh metadata thất bại, cần kiểm tra `information_schema` và lịch sử migration trước khi chạy lại; không giả định đã rollback.
+
+SQLite 3.39.2 không hỗ trợ thêm/gỡ table CHECK trực tiếp trên bảng hiện hữu. Bản test dùng một cột ảo không lưu dữ liệu `users_domain_check_guard`, được thêm bằng `ALTER TABLE ... ADD COLUMN` cùng sáu column CHECK có tên; `down()` gỡ riêng cột này bằng `DROP COLUMN`. Các CHECK vẫn được SQLite thực thi trên giá trị của `users`. SQLite tự ghi lại nội dung bảng khi `DROP COLUMN`; migration không tự dựng bảng hay tắt `foreign_keys`. Test trên SQLite in-memory và file xác minh dữ liệu hồ sơ, cột/default/nullable, primary key, unique email/phone, các index và khóa ngoại còn nguyên sau `down/up`.
 
 ## Kế hoạch migration theo phụ thuộc
 

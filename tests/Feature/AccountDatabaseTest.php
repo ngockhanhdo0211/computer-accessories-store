@@ -50,8 +50,10 @@ class AccountDatabaseTest extends TestCase
 
     public function test_user_extension_migration_down_and_up_on_sqlite(): void
     {
+        $checks = require database_path('migrations/2026_09_16_000001_add_user_domain_checks_to_users_table.php');
         $migration = require database_path('migrations/2026_09_16_000000_add_account_fields_to_users_table.php');
 
+        $checks->down();
         $migration->down();
 
         foreach (['phone', 'gender', 'dob', 'address', 'role', 'status', 'current_tier', 'membership_spending', 'last_login_at', 'must_change_password'] as $column) {
@@ -59,6 +61,7 @@ class AccountDatabaseTest extends TestCase
         }
 
         $migration->up();
+        $checks->up();
 
         foreach (['phone', 'gender', 'dob', 'address', 'role', 'status', 'current_tier', 'membership_spending', 'last_login_at', 'must_change_password'] as $column) {
             $this->assertTrue(Schema::hasColumn('users', $column), $column);
