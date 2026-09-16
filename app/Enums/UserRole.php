@@ -16,4 +16,13 @@ enum UserRole: string
             self::Admin => 'Quản trị viên',
         };
     }
+
+    public function dashboardRouteName(): string
+    {
+        return match ($this) {
+            self::Customer => 'customer.dashboard',
+            self::Employee => 'employee.dashboard',
+            self::Admin => 'admin.dashboard',
+        };
+    }
 }

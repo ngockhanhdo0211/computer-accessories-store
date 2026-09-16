@@ -121,6 +121,8 @@ Tổng lượt đã tiêu = usage status `consumed`; khi nhận attempt mới, g
 
 Không sửa hai bảng mặc định này trong giai đoạn thiết kế. Cache/queue là hạ tầng Laravel, ngoài 24 bảng nghiệp vụ. Cột `created_at` của password reset giữ kiểu TIMESTAMP mặc định Laravel; các bảng nghiệp vụ mới dùng DATETIME(6) UTC như quy ước.
 
+Slice xác thực dùng session guard Laravel: chỉ `users.status=active` được đăng nhập; khi đăng nhập thành công, session ID được tạo lại và `last_login_at` được cập nhật. POST logout xóa xác thực, vô hiệu session và tạo lại CSRF token. Các route bảo vệ kiểm tra lại trạng thái từ database ở mỗi request: phiên của user vừa chuyển sang `locked`/`inactive` bị logout và invalidate ngay ở request bảo vệ kế tiếp. Middleware role dùng enum và từ chối 403 khi sai role; intended URL chỉ được dùng cho `/dashboard` hoặc dashboard đúng role trong slice này. Rate limit POST login dựa trên email chuẩn hóa kết hợp IP, không đổi `users.status`.
+
 ### Dữ liệu hiện tại và snapshot lịch sử
 
 | Dữ liệu hiện tại/projection | Snapshot hoặc sổ bất biến |

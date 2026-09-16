@@ -41,8 +41,8 @@ class CustomerRegistrationTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        $this->get('/register')->assertRedirect('/');
-        $this->post('/register', $this->validRegistration())->assertRedirect('/');
+        $this->get('/register')->assertRedirect('/dashboard');
+        $this->post('/register', $this->validRegistration())->assertRedirect('/dashboard');
 
         $this->assertDatabaseCount('users', 1);
     }
