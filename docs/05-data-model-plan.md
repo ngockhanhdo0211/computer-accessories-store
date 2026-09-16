@@ -1,6 +1,6 @@
 # 05 — Kế hoạch mô hình dữ liệu
 
-Đây là bản đồ khái niệm để chuẩn bị thiết kế, **không phải schema/migration cuối cùng**. Chưa tạo bảng nghiệp vụ trong giai đoạn tài liệu. Migration đang có chỉ là Laravel mặc định: `users`, `password_reset_tokens`, `sessions`, `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs`. `.env.example` đang dùng SQLite mẫu; MariaDB/MySQL là hệ quản trị mục tiêu. Kiểu dữ liệu, khóa, chỉ mục và quan hệ xóa sẽ chốt theo từng slice.
+Đây là bản đồ khái niệm để chuẩn bị thiết kế, **không phải schema/migration cuối cùng**. Chưa tạo bảng thương mại điện tử; đã có migration mở rộng `users` cho đăng ký customer bên cạnh migration Laravel mặc định (`users`, `password_reset_tokens`, `sessions`, cache và queue). `.env.example` đang dùng SQLite mẫu; MariaDB/MySQL là hệ quản trị mục tiêu. Kiểu dữ liệu, khóa, chỉ mục và quan hệ xóa sẽ chốt theo từng slice.
 
 ## Nhóm thực thể dự kiến
 

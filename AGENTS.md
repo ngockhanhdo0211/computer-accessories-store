@@ -4,7 +4,7 @@
 
 Đây là website bán phụ kiện máy tính và công nghệ. Công nghệ đã chốt: Laravel 12, PHP 8.2, MariaDB/MySQL, Blade, Bootstrap, JavaScript, Vite, PHPUnit và MVC; phát triển trên Windows bằng Visual Studio Code. `package.json` hiện là bộ khởi tạo Vite/Tailwind của Laravel, chưa phải bằng chứng Bootstrap đã được cài. Không tự thêm package để thay đổi công nghệ.
 
-Hiện tại chỉ xây dựng tài liệu nền. Chưa tạo migration, model, controller, giao diện hay chức năng nghiệp vụ nếu chưa có yêu cầu cho một giai đoạn triển khai cụ thể. Đọc [phạm vi](docs/01-project-scope.md), [quy tắc](docs/02-business-rules.md), [ma trận quyền](docs/03-role-permission-matrix.md), [vòng đời đơn](docs/04-order-lifecycle.md), [kế hoạch dữ liệu](docs/05-data-model-plan.md) và [lộ trình](docs/06-development-roadmap.md) trước khi triển khai.
+Đã triển khai phần nền tảng `users` và đăng ký customer theo vertical slice đầu tiên. Các phần khác chỉ triển khai khi có yêu cầu cho giai đoạn cụ thể. Đọc [phạm vi](docs/01-project-scope.md), [quy tắc](docs/02-business-rules.md), [ma trận quyền](docs/03-role-permission-matrix.md), [vòng đời đơn](docs/04-order-lifecycle.md), [kế hoạch dữ liệu](docs/05-data-model-plan.md) và [lộ trình](docs/06-development-roadmap.md) trước khi triển khai.
 
 ## Kỷ luật phát triển
 

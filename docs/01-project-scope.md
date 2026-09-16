@@ -28,7 +28,7 @@ Hệ thống có đúng ba vai trò: `customer`, `employee`, `admin`. Hạng th�
 
 ## Hiện trạng repository
 
-Repository đang ở skeleton Laravel. Migration hiện có chỉ gồm `users`, `password_reset_tokens`, `sessions`, `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs`; chưa có lược đồ thương mại điện tử. `.env.example` vẫn là cấu hình SQLite mẫu. `package.json` có Vite và Tailwind từ skeleton, chưa có Bootstrap. Những khác biệt này cần xử lý trong slice triển khai thích hợp, không sửa trong giai đoạn tài liệu.
+Repository đã có vertical slice nền tảng `users` và đăng ký customer: migration mở rộng, enum, form/validation, Action và test. Các bảng thương mại điện tử chưa được tạo; migration Laravel mặc định cho password reset, sessions, cache và queue vẫn giữ nguyên. `.env.example` vẫn là cấu hình SQLite mẫu. `package.json` có Vite và Tailwind từ skeleton, chưa có Bootstrap. Những phần còn thiếu được xử lý theo từng slice phù hợp.
 
 ## Ngoài phạm vi giai đoạn tài liệu
 

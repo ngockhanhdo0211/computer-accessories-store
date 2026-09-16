@@ -1,6 +1,6 @@
 # 07 — Thiết kế cơ sở dữ liệu triển khai
 
-Tài liệu này là thiết kế cho MariaDB/MySQL, chưa phải migration. Baseline chỉ có `users`, `password_reset_tokens`, `sessions`, cache và queue mặc định Laravel. Đề xuất **24 bảng nghiệp vụ mới và mở rộng `users`**; không tạo bảng `payments` riêng: `payment_attempts` là hồ sơ giao dịch VNPay, còn `orders.payment_status` là trạng thái thanh toán của đơn (COD hoặc VNPay). Kho phiên bản đầu chỉ có một địa điểm nên không cần bảng `warehouses`.
+Tài liệu này là thiết kế cho MariaDB/MySQL. Migration mở rộng `users` cho đăng ký customer đã triển khai; các bảng nghiệp vụ còn lại vẫn là kế hoạch. Baseline Laravel có `users`, `password_reset_tokens`, `sessions`, cache và queue mặc định. Đề xuất **24 bảng nghiệp vụ mới và mở rộng `users`**; không tạo bảng `payments` riêng: `payment_attempts` là hồ sơ giao dịch VNPay, còn `orders.payment_status` là trạng thái thanh toán của đơn (COD hoặc VNPay). Kho phiên bản đầu chỉ có một địa điểm nên không cần bảng `warehouses`.
 
 ## Quy ước và nguyên tắc
 
@@ -8,7 +8,7 @@ Tài liệu này là thiết kế cho MariaDB/MySQL, chưa phải migration. Bas
 - Lưu mốc thời gian bằng `DATETIME(6)` UTC; chuyển sang `Asia/Ho_Chi_Minh` khi hiển thị. `expires_at` và cửa sổ 90/7 ngày so trên UTC. Không dùng giờ địa phương làm khóa hoặc tính hết hạn. `created_at`, `updated_at` mặc định do ứng dụng cấp UTC, không dựa vào múi giờ session SQL.
 - Chọn `VARCHAR` + PHP backed enum/validation cho các trạng thái đã chốt; không dùng SQL `ENUM` vì thêm giá trị SQL ENUM đòi đổi schema và thứ tự nội bộ. Dùng DB `CHECK` cho số không âm, khoảng rating/discount và giá trị trạng thái trên phiên bản MariaDB/MySQL hỗ trợ CHECK đúng nghĩa; luôn lặp lại validation trong ứng dụng. Trước migration cần kiểm tra phiên bản DB thực tế.
 - Ký hiệu từ điển: `!` = NOT NULL, không có default trừ khi ghi `=...`; `?` = NULL, default NULL; `=x` = NOT NULL, default x. Mỗi bảng nghiệp vụ có `id BIGINT UNSIGNED AUTO_INCREMENT PK`, `created_at DATETIME(6)!`, `updated_at DATETIME(6)!`, trừ bảng lịch sử/log chỉ có `created_at`, bảng nối chỉ có khóa ghép và nơi ghi chú khác. Các cột thời gian nullable đều ghi `?` rõ ràng. Không ngầm định default cho cột `!`.
-- Không lưu tổng có thể tính tùy tiện. `products.sellable_quantity`, `damaged_quantity`, `sold_quantity` là **projection giao dịch** để khóa và đọc nhanh, cập nhật cùng transaction với `inventory_transactions`/chuyển `da_giao`; có tác vụ đối soát từ sổ giao dịch. `available = sellable_quantity - SUM(reservations còn hiệu lực)` tính khi truy vấn dưới khóa, không lưu. `orders` giữ tổng và snapshot vì cần lịch sử kế toán; `users.current_tier` là projection từ chi tiêu hợp lệ, có lịch sử và phép tính lại.
+- Không lưu tổng có thể tính tùy tiện. `products.sellable_quantity`, `damaged_quantity`, `sold_quantity` là **projection giao dịch** để khóa và đọc nhanh, cập nhật cùng transaction với `inventory_transactions`/chuyển `da_giao`; có tác vụ đối soát từ sổ giao dịch. `available = sellable_quantity - SUM(reservations còn hiệu lực)` tính khi truy vấn dưới khóa, không lưu. `orders` giữ tổng và snapshot vì cần lịch sử kế toán; `users.current_tier` và `users.membership_spending` là projection từ đơn đã giao chưa full refund, không tính shipping; có lịch sử hạng và phép tính lại. Cả hai chỉ được cập nhật qua nghiệp vụ/tính lại có audit.
 - Không hard delete order, item, payment, refund, inventory, coupon usage, review history, audit. FKs dùng `RESTRICT` cho dữ liệu giao dịch, `SET NULL` chỉ khi danh tính tác nhân phụ trợ được phép biến mất; không cascade xóa lịch sử. Mọi FK dùng `ON UPDATE RESTRICT` vì ID không được đổi.
 
 ## ERD
@@ -58,7 +58,7 @@ erDiagram
 
 | Bảng và mục đích | Cột riêng (ngoài `id`, timestamps chung) | Khóa/ràng buộc, xóa và snapshot |
 | --- | --- | --- |
-| `users` — tài khoản, mở rộng migration Laravel | Giữ `name VARCHAR(255)!`, `email VARCHAR(255)!`, `email_verified_at TIMESTAMP?`, `password VARCHAR(255)!`, `remember_token VARCHAR(100)?`, `created_at TIMESTAMP?`, `updated_at TIMESTAMP?` đúng migration Laravel hiện có; thêm `role VARCHAR(16)!=customer`, `status VARCHAR(16)!=active`, `current_tier VARCHAR(16)!=dong`. | `UQ(email)` sẵn có; CHECK role/status/tier theo mục trạng thái. Không tự đăng ký employee/admin; không khóa/hạ quyền admin cuối dưới khóa hàng admin. Không hard delete khi đã phát sinh dữ liệu. `current_tier` là projection, role không liên quan tier. |
+| `users` — tài khoản, mở rộng migration Laravel | Giữ `name VARCHAR(255)!`, `email VARCHAR(255)!`, `email_verified_at TIMESTAMP?`, `password VARCHAR(255)!`, `remember_token VARCHAR(100)?`, `created_at TIMESTAMP?`, `updated_at TIMESTAMP?` đúng migration Laravel hiện có; thêm `phone VARCHAR(20)?`, `gender VARCHAR(3)?`, `dob DATE?`, `address TEXT?`, `role VARCHAR(16)!=customer`, `status VARCHAR(16)!=active`, `current_tier VARCHAR(16)!=dong`, `membership_spending BIGINT UNSIGNED!=0`, `last_login_at TIMESTAMP?`, `must_change_password BOOLEAN!=0`. Tên `current_tier` giữ theo thiết kế này thay cho `membership_level` trong yêu cầu slice. | `UQ(email)` sẵn có, thêm `UQ(phone)`; index role/status/current_tier. Gender chỉ `nam`/`nu`, ngày sinh không ở tương lai kiểm tra tại ứng dụng; spending không âm. Slice đăng ký dùng enum cast, default và validation ứng dụng; Migration dự kiến `add_user_domain_checks_to_users_table` sẽ bổ sung CHECK role/status/current_tier, gender, membership_spending và must_change_password; chưa có trong slice này. Không tự đăng ký employee/admin; không khóa/hạ quyền admin cuối dưới khóa hàng admin. Không hard delete khi đã phát sinh dữ liệu. `current_tier` là projection, role không liên quan tier. |
 | `membership_histories` — lịch sử tự tính hạng | `user_id BIGINT!`, `old_tier VARCHAR(16)?`, `new_tier VARCHAR(16)!`, `spending_vnd BIGINT UNSIGNED!`, `reason VARCHAR(40)!`, `requested_by BIGINT?` (admin yêu cầu tính lại), `created_at` chung; không `updated_at`. | FK user RESTRICT, actor SET NULL. Bất biến: tier hợp lệ, spending ≥0. Chỉ append, không soft/hard delete. `spending_vnd` là snapshot căn cứ lần tính. |
 | `audit_logs` — thao tác nhạy cảm | `actor_id BIGINT?` (NULL cho hệ thống), `action VARCHAR(80)!`, `subject_type VARCHAR(80)!`, `subject_id BIGINT?`, `before_json JSON?`, `after_json JSON?`, `request_id CHAR(36)?`, `created_at` chung; không `updated_at`. | FK actor SET NULL; không FK đa hình subject. JSON loại bỏ password, token, bí mật cổng và dữ liệu thanh toán thô. Append only; không soft delete. Snapshot chỉ dữ liệu cần truy vết. |
 | `categories` — danh mục động | `parent_id BIGINT?`, `name VARCHAR(255)!`, `slug VARCHAR(255)!`, `is_visible BOOLEAN!=1`, `created_at`, `updated_at`. | `UQ(slug)` toàn bảng, FK parent RESTRICT, `parent_id != id` và kiểm tra toàn bộ chu trình trong transaction. Ẩn thay xóa khi có liên kết/lịch sử; product dưới category ẩn ngừng hiển thị/bán. Không soft delete để trạng thái ẩn rõ ràng. |
@@ -157,7 +157,7 @@ Mọi FK dùng `ON UPDATE RESTRICT`; bảng sau nêu `ON DELETE`. Các cột cù
 
 | Bảng | Unique/PK bổ sung | Index truy vấn và lý do |
 | --- | --- | --- |
-| `users` | `UQ(email)` mặc định | `(role,status,id)` để kiểm tra admin cuối và lọc nhân sự. |
+| `users` | `UQ(email)` mặc định; thêm `UQ(phone)` (NULL được phép) | Index riêng role/status/current_tier trong slice đăng ký; `(role,status,id)` có thể bổ sung sau khi đo truy vấn kiểm tra admin cuối và lọc nhân sự. |
 | `membership_histories` | — | `(user_id,created_at,id)` để xem diễn tiến hạng. |
 | `audit_logs` | — | `(subject_type,subject_id,created_at)`, `(actor_id,created_at)` để tra vết. |
 | `categories`, `brands` | `UQ(slug)` mỗi bảng | `categories(parent_id,is_visible)`; `brands(is_visible)` cho menu/admin. |
@@ -196,9 +196,9 @@ Chỉ thêm index khi phục vụ truy vấn đã nêu. Giới hạn index trên
 
 ## Kế hoạch migration theo phụ thuộc
 
-Đây là nhóm migration **dự kiến trong tương lai**, không tạo trong giai đoạn tài liệu. Chia theo vertical slice; không sửa migration mặc định đã chạy trên dữ liệu hiện hữu một cách tùy tiện.
+Đây là kế hoạch migration theo vertical slice. Phần mở rộng `users` cho hồ sơ và đăng ký customer ở bước 1 đã được tạo; các bảng còn lại sẽ được triển khai ở các slice tiếp theo. Không sửa migration mặc định đã chạy trên dữ liệu hiện hữu một cách tùy tiện.
 
-1. Mở rộng `users` bằng migration mới cho role/status/current_tier; giữ `password_reset_tokens`, `sessions` mặc định. Thêm `membership_histories`, `audit_logs`.
+1. Mở rộng `users` bằng migration mới cho hồ sơ (phone/gender/dob/address), role/status/current_tier, membership_spending, last_login_at và must_change_password; giữ `password_reset_tokens`, `sessions` mặc định. `membership_histories` và `audit_logs` thuộc slice sau.
 2. Tạo `categories` (self FK sau khi có bảng), `brands`, `shipping_rates`, `coupons`.
 3. Tạo `products`, `product_images`, `cart_items`, ba bảng target coupon, `inventory_adjustment_requests`.
 4. Tạo `payment_attempts` (sau user/rate/coupon), rồi `stock_reservations`.
