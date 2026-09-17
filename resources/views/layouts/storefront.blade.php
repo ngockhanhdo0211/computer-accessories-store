@@ -24,6 +24,9 @@
                 @else
                     <span class="nav-user" title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</span>
                     <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
+                    @if (auth()->user()->isAdmin())
+                        <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
+                    @endif
                     <form class="inline-form" method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button class="link-button" type="submit">Đăng xuất</button>
@@ -42,6 +45,9 @@
             @else
                 <span class="nav-user">{{ auth()->user()->name }}</span>
                 <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
+                    @if (auth()->user()->isAdmin())
+                        <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
+                    @endif
                 <form class="inline-form" method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="link-button" type="submit">Đăng xuất</button>

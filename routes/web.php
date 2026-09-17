@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredCustomerController;
 use Illuminate\Support\Facades\Route;
@@ -32,4 +33,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->middleware('role:employee')->name('employee.dashboard');
     Route::get('/admin/dashboard', fn () => view('dashboard'))
         ->middleware('role:admin')->name('admin.dashboard');
+
+    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::resource('categories', CategoryController::class)->except('show');
+    });
 });

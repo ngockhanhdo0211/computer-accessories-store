@@ -26,3 +26,10 @@ if (toggle && mobileNav) {
 
     window.matchMedia('(min-width: 52.001rem)').addEventListener('change', closeMenu);
 }
+document.querySelectorAll('[data-confirm-delete]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+        if (!window.confirm('Xóa danh mục này? Thao tác chỉ thành công khi danh mục chưa được sử dụng.')) {
+            event.preventDefault();
+        }
+    });
+});
