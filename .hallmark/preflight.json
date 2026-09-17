@@ -1,0 +1,18 @@
+{
+  "scope": "page",
+  "genre": "modern minimal",
+  "theme": "Grid",
+  "accent": "ultramarine",
+  "macrostructure": "Split Studio",
+  "enrichment": "hand-built decorative peripheral SVG",
+  "motion": "restrained interaction transitions, reduced-motion fallback",
+  "scan": {
+    "design_md": false,
+    "existing_hallmark_memory": false,
+    "existing_css": "Tailwind/Vite directives in resources/css/app.css; inline CSS in page views",
+    "existing_js": "resources/js/app.js imports bootstrap only",
+    "fonts": "no local font files; default welcome uses Bunny Fonts CDN",
+    "tokens": "none",
+    "business_content": "catalog and business dashboard not implemented; no invented product or metrics"
+  }
+}

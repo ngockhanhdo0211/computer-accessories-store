@@ -1,0 +1,56 @@
+/* Hallmark · macrostructure: Split Studio · tone: calm technical · anchor hue: ultramarine */
+/* theme: Grid · genre: modern minimal · enrichment: hand-built peripheral diagram · nav: N1a · footer: Ft2
+ * pre-emit critique: P5 H5 E4 S5 R5 V4 · slop: pass (58) · contrast: pass (40–41) · mobile: pass (34, 49–57)
+ * honest: pass (46) · chrome: pass (47) · tokens: pass (48) · icons: pass (30) */
+:root {
+  --color-paper: oklch(98% 0.004 255);
+  --color-paper-muted: oklch(95% 0.007 255);
+  --color-paper-strong: oklch(90% 0.014 255);
+  --color-ink: oklch(20% 0.018 255);
+  --color-ink-muted: oklch(43% 0.018 255);
+  --color-accent: oklch(45% 0.19 264);
+  --color-accent-hover: oklch(35% 0.16 264);
+  --color-accent-ink: oklch(99% 0.003 255);
+  --color-line: oklch(82% 0.011 255);
+  --color-focus: oklch(37% 0.19 264);
+  --color-success: oklch(37% 0.10 158);
+  --color-success-paper: oklch(94% 0.035 158);
+  --color-warning: oklch(47% 0.10 82);
+  --color-warning-paper: oklch(96% 0.035 82);
+  --color-error: oklch(43% 0.16 25);
+  --color-error-paper: oklch(96% 0.026 25);
+  --font-body: "Segoe UI", Tahoma, sans-serif;
+  --font-display: Bahnschrift, "Arial Narrow", "Segoe UI", sans-serif;
+  --font-mono: var(--font-body);
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: clamp(2.5rem, 6vw, 5rem);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-full: 999px;
+  --border-thin: 1px;
+  --underline-offset: 0.125rem;
+  --shadow-panel: 0 14px 36px -28px oklch(20% 0.018 255 / 0.28);
+  --dur-fast: 120ms;
+  --dur-normal: 200ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.25, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.25, 1);
+  --container: 76rem;
+  --content: 42rem;
+}
