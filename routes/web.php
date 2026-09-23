@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredCustomerController;
@@ -31,7 +32,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->middleware('role:customer')->name('customer.dashboard');
     Route::get('/employee/dashboard', fn () => view('dashboard'))
         ->middleware('role:employee')->name('employee.dashboard');
-    Route::get('/admin/dashboard', fn () => view('dashboard'))
+    Route::get('/admin/dashboard', AdminDashboardController::class)
         ->middleware('role:admin')->name('admin.dashboard');
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {

@@ -69,7 +69,7 @@ class AuthenticationAndAuthorizationTest extends TestCase
                 ->assertOk()
                 ->assertSee($user->name)
                 ->assertSee($role->label())
-                ->assertSee('dashboard nền tảng')
+                ->assertSee($role === UserRole::Admin ? 'Tổng quan quản trị' : 'dashboard nền tảng')
                 ->assertSee('action="'.route('logout').'"', false);
 
             $this->post('/logout')->assertRedirect('/');
