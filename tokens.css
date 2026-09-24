@@ -1,15 +1,13 @@
-/* Hallmark · macrostructure: Split Studio · tone: calm technical · anchor hue: ultramarine */
-/* theme: Grid · genre: modern minimal · enrichment: hand-built peripheral diagram · nav: N1a · footer: Ft2
- * pre-emit critique: P5 H5 E4 S5 R5 V4 · slop: pass (58) · contrast: pass (40–41) · mobile: pass (34, 49–57)
- * honest: pass (46) · chrome: pass (47) · tokens: pass (48) · icons: pass (30) */
+/* Hallmark · design-system: design.md · genre: modern minimal · theme: Grid · ultramarine */
 :root {
-  --color-paper: oklch(98% 0.004 255);
-  --color-paper-muted: oklch(95% 0.007 255);
-  --color-paper-strong: oklch(90% 0.014 255);
+  --color-paper: oklch(98% 0.006 93);
+  --color-paper-muted: oklch(95% 0.009 93);
+  --color-paper-strong: oklch(91% 0.012 93);
   --color-ink: oklch(20% 0.018 255);
   --color-ink-muted: oklch(43% 0.018 255);
   --color-accent: oklch(45% 0.19 264);
   --color-accent-hover: oklch(35% 0.16 264);
+  --color-accent-soft: oklch(91% 0.035 264);
   --color-accent-ink: oklch(99% 0.003 255);
   --color-line: oklch(82% 0.011 255);
   --color-focus: oklch(37% 0.19 264);

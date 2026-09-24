@@ -11,8 +11,8 @@
         </header>
         <div class="auth-layout">
             <aside class="auth-aside">
-                <h2>Một tài khoản, một điểm bắt đầu.</h2>
-                <p>Hiện tại bạn có thể tạo tài khoản và truy cập dashboard nền tảng. Các tính năng mua sắm sẽ được bổ sung theo lộ trình.</p>
+                <h2>Một tài khoản cho góc làm việc của bạn.</h2>
+                <p>Tạo tài khoản để sẵn sàng khám phá phụ kiện laptop. Catalog và tính năng mua sắm sẽ được bổ sung theo lộ trình.</p>
                 <p>Đã có tài khoản? <a class="text-link" href="{{ route('login') }}">Đăng nhập</a></p>
             </aside>
             <section class="form-panel" aria-labelledby="register-form-title">

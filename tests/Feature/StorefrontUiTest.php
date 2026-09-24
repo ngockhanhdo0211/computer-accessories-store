@@ -30,6 +30,18 @@ class StorefrontUiTest extends TestCase
         }
     }
 
+    public function test_home_hero_references_an_existing_local_image(): void
+    {
+        $imagePath = public_path('images/laptop-accessories-hero.jpg');
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('src="'.asset('images/laptop-accessories-hero.jpg').'"', false)
+            ->assertSee('width="1536" height="1024"', false);
+
+        $this->assertFileExists($imagePath);
+    }
+
     public function test_authenticated_home_has_dashboard_and_post_logout(): void
     {
         $user = User::factory()->create(['name' => 'Khách thử nghiệm']);

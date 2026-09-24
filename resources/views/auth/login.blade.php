@@ -7,12 +7,12 @@
         <header class="page-intro">
             <p class="eyebrow">Tài khoản / Đăng nhập</p>
             <h1>Đăng nhập</h1>
-            <p>Tiếp tục với tài khoản của bạn để truy cập dashboard nền tảng.</p>
+            <p>Đăng nhập để quản lý tài khoản của bạn tại Trạm Phụ Kiện.</p>
         </header>
         <div class="auth-layout">
             <aside class="auth-aside">
-                <h2>Trở lại Trạm Phụ Kiện.</h2>
-                <p>Tài khoản là điểm bắt đầu cho hành trình mua sắm khi các tính năng tiếp theo ra mắt.</p>
+                <h2>Trở lại góc làm việc của bạn.</h2>
+                <p>Phụ kiện laptop, tài khoản và các công cụ quản lý sẽ cùng ở một nơi khi catalog được hoàn thiện.</p>
                 <a class="text-link" href="{{ route('home') }}">Về trang chủ</a>
             </aside>
             <section class="form-panel" aria-labelledby="login-form-title">

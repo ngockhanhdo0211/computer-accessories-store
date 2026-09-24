@@ -11,6 +11,7 @@
 <body>
     <a class="skip-link" href="#main-content">Đi đến nội dung chính</a>
     <header class="site-header">
+        <div class="site-ribbon"><div class="shell">PHỤ KIỆN LAPTOP <span>·</span> CATALOG ĐANG HOÀN THIỆN</div></div>
         <div class="shell header-inner">
             <a class="brand" href="{{ route('home') }}" aria-label="Trạm Phụ Kiện, trang chủ">
                 <span class="brand-mark" aria-hidden="true">TP</span>
@@ -63,7 +64,7 @@
     </main>
     <footer class="site-footer">
         <div class="shell footer-inner">
-            <p><strong>Trạm Phụ Kiện</strong> · Nền tảng cửa hàng phụ kiện máy tính đang được xây dựng. Danh mục và tính năng mua sắm sẽ được bổ sung ở các giai đoạn tiếp theo.</p>
+            <p><strong>Trạm Phụ Kiện</strong> · Phụ kiện laptop cho góc làm việc mỗi ngày. Catalog sản phẩm và tính năng mua sắm đang được hoàn thiện.</p>
             <nav class="footer-links" aria-label="Điều hướng cuối trang">
                 <a href="{{ route('home') }}">Trang chủ</a>
                 @guest

@@ -1,9 +1,17 @@
 [
-  {
-    "date": "2026-09-17",
-    "macrostructure": "Split Studio",
-    "theme": "Grid",
-    "enrichment": "hand-built decorative peripheral SVG",
-    "brief": "Storefront, authentication, and foundation dashboard UI for a computer accessories store"
-  }
+    {
+        "date": "2026-09-19",
+        "scope": "app",
+        "macrostructure": "Retail editorial / workbench",
+        "theme": "Grid",
+        "enrichment": "original AI-generated laptop accessories photograph",
+        "brief": "Multi-page laptop accessories storefront redesign"
+    },
+    {
+        "date": "2026-09-17",
+        "macrostructure": "Split Studio",
+        "theme": "Grid",
+        "enrichment": "hand-built decorative peripheral SVG",
+        "brief": "Storefront, authentication, and foundation dashboard UI for a computer accessories store"
+    }
 ]

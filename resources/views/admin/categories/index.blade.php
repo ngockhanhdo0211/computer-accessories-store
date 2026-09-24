@@ -3,7 +3,7 @@
 @section('content')
 <div class="shell admin-page">
     <header class="admin-heading">
-        <div><p class="eyebrow">Catalog · Category</p><h1>Quản lý danh mục</h1><p>Danh mục động theo cấu trúc cha–con. Brand và Product sẽ được triển khai ở giai đoạn sau.</p></div>
+        <div><p class="eyebrow">Quản trị / Danh mục</p><h1>Quản lý danh mục</h1><p>Danh mục động theo cấu trúc cha–con. Thương hiệu và sản phẩm sẽ được bổ sung ở giai đoạn sau.</p></div>
         <a class="button" href="{{ route('admin.categories.create') }}">Tạo danh mục</a>
     </header>
     @if ($errors->has('category'))
