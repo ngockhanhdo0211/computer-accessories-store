@@ -63,8 +63,8 @@ erDiagram
 | `audit_logs` — thao tác nhạy cảm | `actor_id BIGINT?` (NULL cho hệ thống), `action VARCHAR(80)!`, `subject_type VARCHAR(80)!`, `subject_id BIGINT?`, `before_json JSON?`, `after_json JSON?`, `request_id CHAR(36)?`, `created_at` chung; không `updated_at`. | FK actor SET NULL; không FK đa hình subject. JSON loại bỏ password, token, bí mật cổng và dữ liệu thanh toán thô. Append only; không soft delete. Snapshot chỉ dữ liệu cần truy vết. |
 | `categories` — danh mục động | `parent_id BIGINT?`, `name VARCHAR(255)!`, `slug VARCHAR(255)!`, `is_visible BOOLEAN!=1`, `created_at`, `updated_at`. | Đã triển khai trong migration `create_categories_table`: `UQ(slug)` toàn bảng, index `parent_id`/`is_visible`, FK parent `ON UPDATE RESTRICT ON DELETE RESTRICT`, CHECK `is_visible` và invariant `parent_id != id` (trigger có tên ổn định trên MariaDB 10.4 vì CHECK không được tham chiếu AUTO_INCREMENT; trigger tương đương trên SQLite test). Toàn bộ chu trình được kiểm tra trong transaction với khóa từng ancestor. Migration không tự xóa bảng nếu DDL trigger/CHECK dừng giữa chừng; trạng thái bất thường phải được kiểm tra thủ công trước khi chạy lại. Không soft delete; ẩn thay xóa khi có liên kết/lịch sử. Slug sinh khi tạo nếu bỏ trống, không tự đổi theo tên khi cập nhật. |
 | `brands` — thương hiệu | `name VARCHAR(255)!`, `slug VARCHAR(255)!`, `is_visible BOOLEAN!=1`, timestamps. | Đã triển khai trong migration `create_brands_table`: `UQ(slug)`, index `is_visible`, CHECK `is_visible` trên MariaDB/SQLite. Không hard delete khi được dùng, ưu tiên ẩn; Product liên quan ngừng hiển thị/bán, admin vẫn xem. Không soft delete. Slug sinh khi tạo nếu bỏ trống và không tự đổi khi chỉ sửa tên. |
-| `products` — catalog và projection kho một kho | `category_id BIGINT!`, `brand_id BIGINT!`, `sku VARCHAR(80)!`, `slug VARCHAR(255)!`, `name VARCHAR(255)!`, `short_description TEXT!`, `description LONGTEXT!`, `price_vnd BIGINT UNSIGNED!`, `sale_price_vnd BIGINT UNSIGNED?`, `visibility VARCHAR(8)!=active`, `low_stock_threshold INT UNSIGNED!=5`, `sellable_quantity INT UNSIGNED!=0`, `damaged_quantity INT UNSIGNED!=0`, `sold_quantity INT UNSIGNED!=0`, timestamps. | FK category/brand RESTRICT; `UQ(sku)`, `UQ(slug)`; giá >0, giá KM < giá gốc, lượng không âm. `con_hang/sap_het/het_hang` **tính** từ available/ngưỡng, không lưu. Không soft delete ở schema: `hidden` là trạng thái ẩn; cấm hard delete sau nghiệp vụ. |
-| `product_images` — một ảnh đại diện, nhiều ảnh chi tiết | `product_id BIGINT!`, `path VARCHAR(500)!`, `alt_text VARCHAR(255)?`, `is_primary BOOLEAN!=0`, `sort_order INT UNSIGNED!=0`, timestamps. | FK product RESTRICT; `UQ(product_id,path)`. Một ảnh primary tối đa/bắt buộc cho product xuất bản: khóa product và kiểm tra trong transaction khi thêm/đổi/xóa ảnh; không dùng generated column phụ thuộc phiên bản DB. Ảnh chưa phát sinh nghiệp vụ có thể xóa, product lịch sử không xóa cứng. |
+| `products` — catalog và projection kho một kho | `category_id BIGINT!`, `brand_id BIGINT!`, `sku VARCHAR(80)!`, `slug VARCHAR(255)!`, `name VARCHAR(255)!`, `short_description TEXT!`, `description LONGTEXT!`, `price_vnd BIGINT UNSIGNED!`, `sale_price_vnd BIGINT UNSIGNED?`, `visibility VARCHAR(8)!=active`, `low_stock_threshold INT UNSIGNED!=5`, `sellable_quantity INT UNSIGNED!=0`, `damaged_quantity INT UNSIGNED!=0`, `sold_quantity INT UNSIGNED!=0`, timestamps. | **Đã triển khai** trong migration `create_products_table`: FK category/brand RESTRICT; `UQ(sku)`, `UQ(slug)`; CHECK giá >0, giá KM >0 và < giá gốc, visibility `active/hidden`, mọi projection lượng không âm. `con_hang/sap_het/het_hang` **tính** từ dữ liệu thật, không lưu. Không soft delete: `hidden` là trạng thái ẩn; hard delete chỉ cho product chưa phát sinh nghiệp vụ. |
+| `product_images` — một ảnh đại diện, nhiều ảnh chi tiết | `product_id BIGINT!`, `path VARCHAR(500)!`, `alt_text VARCHAR(255)?`, `is_primary BOOLEAN!=0`, `sort_order INT UNSIGNED!=0`, timestamps. | **Đã triển khai** trong migration `create_product_images_table`: FK product RESTRICT; `UQ(product_id,path)`; CHECK boolean/sort không âm. Tối đa 8 ảnh ở application. Một ảnh primary tối đa: mọi thao tác thêm/đổi/xóa khóa product và cập nhật trong transaction; không dùng generated column phụ thuộc phiên bản DB. Product được phép chưa có ảnh; xóa ảnh primary chọn ảnh đầu tiên còn lại. |
 
 ### Giỏ, phí và giữ hàng
 
@@ -163,8 +163,8 @@ Mọi FK dùng `ON UPDATE RESTRICT`; bảng sau nêu `ON DELETE`. Các cột cù
 | `membership_histories` | — | `(user_id,created_at,id)` để xem diễn tiến hạng. |
 | `audit_logs` | — | `(subject_type,subject_id,created_at)`, `(actor_id,created_at)` để tra vết. |
 | `categories`, `brands` | `UQ(slug)` mỗi bảng | `categories(parent_id,is_visible)`; `brands(is_visible)` cho menu/admin. |
-| `products` | `UQ(sku)`, `UQ(slug)` | `(category_id,visibility,id)`, `(brand_id,visibility,id)`, `(visibility,created_at,id)` cho catalog. |
-| `product_images` | `UQ(product_id,path)` | `(product_id,is_primary,sort_order)` cho ảnh. |
+| `products` | `UQ(sku)`, `UQ(slug)` | `(category_id,visibility,id)`, `(brand_id,visibility,id)`, `(visibility,created_at,id)`, `(visibility,price_vnd,id)` cho catalog/filter/sort. |
+| `product_images` | `UQ(product_id,path)` | `(product_id,is_primary,sort_order)` cho ảnh đại diện và thứ tự. |
 | `cart_items` | `UQ(user_id,product_id)` | UQ đủ lấy giỏ; FK product cần index. |
 | `shipping_rates` | `UQ(region_key)` | UQ đủ tra phí. |
 | `payment_attempts` | `UQ(user_id,request_key)`, `UQ(gateway_reference)`, `UQ(gateway_transaction_id)` | `(user_id,created_at)`, `(status,expires_at)` cho lịch sử/đối soát. Nhiều NULL được phép ở UQ gateway transaction. |
@@ -196,6 +196,15 @@ Chỉ thêm index khi phục vụ truy vấn đã nêu. Giới hạn index trên
 | Runtime Laravel | `sessions`, `password_reset_tokens` xóa khi logout/thu hồi/hết hạn; cache/queue theo Laravel. |
 | Tài khoản | `users` không hard delete sau khi có nghiệp vụ; dùng `inactive`. |
 
+## Product Catalog đã triển khai
+
+Hai migration `create_products_table` và `create_product_images_table` đã chạy trên MariaDB 10.4.32 và được kiểm thử trên SQLite in-memory. MariaDB dùng InnoDB, cột unsigned và các table CHECK có tên; SQLite tạo bảng bằng DDL cố định để CHECK/FK có cùng ý nghĩa. Partial-state guard dừng nếu bảng đích đã tồn tại và không tự xóa dữ liệu. `down()` chỉ gỡ đúng bảng của migration; phải gỡ `product_images` trước `products` và chỉ chạy khi đã xác nhận không có dữ liệu/dependency.
+
+Các CHECK đã triển khai: `products_price_vnd_check`, `products_sale_price_vnd_check`, `products_visibility_check`, `products_low_stock_threshold_check`, `products_sellable_quantity_check`, `products_damaged_quantity_check`, `products_sold_quantity_check`, `product_images_is_primary_check` và `product_images_sort_order_check`. Index thực tế bám bảng kế hoạch ở trên; thêm `(visibility,price_vnd,id)` cho sắp xếp catalog theo giá.
+
+Ảnh dùng disk `public`, thư mục `products/{id}`, tên UUID do server tạo; chỉ nhận nội dung có MIME thực tế JPEG, PNG hoặc WebP, tối đa 5 MB mỗi ảnh và 8 ảnh mỗi product. Path không mass assign từ request. Giới hạn 8 ảnh và invariant một ảnh đại diện được bảo vệ bằng transaction cùng khóa hàng Product; không dùng `UNIQUE(product_id,is_primary)` vì constraint đó cũng chỉ cho phép một hàng `false`. File mới được dọn nếu upload giữa chừng hoặc ghi metadata thất bại. Xóa ảnh/Product đăng ký cleanup vật lý bằng `afterCommit`, vì vậy rollback transaction ngoài không làm mất file; cleanup chỉ chấp nhận path một cấp trong `products/{id}`. Xóa Product bị FK nghiệp vụ từ chối thì transaction phục hồi metadata và không xóa file. File đã mất được xem là cleanup hoàn tất; lỗi storage sau commit được ghi log để xử lý lại.
+
+Projection `sellable_quantity`, `damaged_quantity`, `sold_quantity` và `low_stock_threshold` không xuất hiện trong form Product; slice Catalog chỉ tạo mặc định 0/0/0/5. Giá hiện hành được tính từ `sale_price_vnd` khi có giá trị hợp lệ, ngược lại dùng `price_vnd`; CHECK giữ invariant `0 < sale_price_vnd < price_vnd`. Search tên/SKU dùng binding và escape `%`, `_`, `!` để chúng mang nghĩa ký tự literal. Inventory transaction, stock reservation và quy trình điều chỉnh tồn vẫn chưa triển khai.
 ## CHECK domain của `users` đã triển khai
 
 | Constraint | Biểu thức |
@@ -219,7 +228,7 @@ SQLite 3.39.2 không hỗ trợ thêm/gỡ table CHECK trực tiếp trên bản
 
 1. Mở rộng `users` bằng migration mới cho hồ sơ (phone/gender/dob/address), role/status/current_tier, membership_spending, last_login_at và must_change_password; giữ `password_reset_tokens`, `sessions` mặc định. `membership_histories` và `audit_logs` thuộc slice sau.
 2. Tạo `categories` (self FK sau khi có bảng), `brands`, `shipping_rates`, `coupons`.
-3. Tạo `products`, `product_images`, `cart_items`, ba bảng target coupon, `inventory_adjustment_requests`.
+3. **Đã tạo `products` và `product_images`.** `cart_items`, ba bảng target coupon và `inventory_adjustment_requests` thuộc các slice sau.
 4. Tạo `payment_attempts` (sau user/rate/coupon), rồi `stock_reservations`.
 5. Tạo `orders`, `order_items`, `order_status_histories`, `coupon_usages`.
 6. Tạo `return_inspections`, `refunds`, `reviews`, `review_replies`.

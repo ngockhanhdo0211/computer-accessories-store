@@ -92,7 +92,6 @@ class BrandManagementTest extends TestCase
             ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)
             ->assertDontSee('<script>alert(1)</script>', false)
             ->assertSee('Đang ẩn')
-            ->assertDontSee('/admin/products', false)
             ->assertDontSee('0 sản phẩm');
 
         $this->assertLessThanOrEqual(3, count(DB::getQueryLog()));

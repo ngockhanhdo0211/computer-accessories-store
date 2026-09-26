@@ -2,7 +2,7 @@
 
 ## Định hướng
 
-Website bán phụ kiện laptop với cảm giác cửa hàng công nghệ gọn, rõ và đáng tin. Giao diện chỉ mô tả những chức năng đã có; khu vực chưa có catalog sản phẩm không hiển thị giá, nút mua hoặc đánh giá giả.
+Website bán phụ kiện laptop với cảm giác cửa hàng công nghệ gọn, rõ và đáng tin. Giao diện chỉ mô tả những chức năng đã có. Catalog hiển thị sản phẩm, giá, ảnh và tồn kho từ dữ liệu thật; không hiển thị nút mua, đánh giá hoặc số liệu thương mại chưa được triển khai.
 
 ## Hệ thống chung
 
@@ -18,7 +18,9 @@ Website bán phụ kiện laptop với cảm giác cửa hàng công nghệ gọ
 - **Trang chủ:** ảnh phụ kiện laptop làm điểm nhìn; phần mô tả rõ hiện trạng, nhóm hàng định hướng và lời mời tạo tài khoản. Không tạo product card giả.
 - **Tài khoản:** tiêu đề ngắn, form là trọng tâm, thông tin hỗ trợ đặt cạnh form trên desktop; trên mobile ưu tiên form và ẩn nội dung hỗ trợ trùng lặp.
 - **Dashboard:** số liệu hoặc trạng thái thật, không mô phỏng doanh thu/đơn hàng.
-- **Category:** danh sách dễ quét và form rõ nhãn, lỗi, trạng thái.
+- **Category/Brand:** danh sách dễ quét và form rõ nhãn, lỗi, trạng thái.
+- **Catalog công khai:** cấu trúc editorial hai cột với bộ lọc tách khỏi lưới sản phẩm; ảnh là điểm nhìn, giá và tồn kho dễ quét, placeholder trung thực; mobile chuyển về một cột.
+- **Product Admin:** workbench mật độ vừa, hàng dữ liệu thay cho card dashboard; form chia thông tin và media, thư viện ảnh có thứ tự/primary rõ ràng.
 
 ## Thành phần dùng chung
 
@@ -26,7 +28,7 @@ Header, wordmark, footer, button, form, focus ring và thông báo dùng chung t
 
 ## Ranh giới
 
-Thiết kế này không tạo route, migration, package hay dữ liệu sản phẩm. Khi catalog công khai và checkout được triển khai, mở rộng cùng hệ thống thay vì thêm màn giả.
+Product Catalog đã dùng visual system này mà không thêm package hay dữ liệu giả. Cart, checkout, order, coupon, review và inventory workflow chưa có; không tạo CTA hoặc số liệu giả cho các phần đó.
 
 ## Exports
 

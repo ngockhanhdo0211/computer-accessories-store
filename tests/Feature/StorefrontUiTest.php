@@ -26,7 +26,7 @@ class StorefrontUiTest extends TestCase
         preg_match_all('/(?:href|action)="([^"]+)"/', $response->getContent(), $matches);
 
         foreach ($matches[1] as $target) {
-            $this->assertContains($target, ['#main-content', route('home'), route('login'), route('register')]);
+            $this->assertContains($target, ['#main-content', route('home'), route('products.index'), route('login'), route('register')]);
         }
     }
 

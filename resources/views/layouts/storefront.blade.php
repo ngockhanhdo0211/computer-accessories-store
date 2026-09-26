@@ -19,6 +19,7 @@
             </a>
             <nav class="nav-main" aria-label="Điều hướng chính">
                 <a href="{{ route('home') }}" @if(request()->routeIs('home')) aria-current="page" @endif>Trang chủ</a>
+                <a href="{{ route('products.index') }}" @if(request()->routeIs('products.*')) aria-current="page" @endif>Cửa hàng</a>
                 @guest
                     <a href="{{ route('login') }}" @if(request()->routeIs('login')) aria-current="page" @endif>Đăng nhập</a>
                     <a class="button" href="{{ route('register') }}" @if(request()->routeIs('register')) aria-current="page" @endif>Đăng ký</a>
@@ -28,6 +29,7 @@
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
                         <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
+                        <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
                     @endif
                     <form class="inline-form" method="POST" action="{{ route('logout') }}">
                         @csrf
@@ -41,6 +43,7 @@
         </div>
         <nav id="mobile-nav" class="shell mobile-nav" aria-label="Điều hướng di động" hidden>
             <a href="{{ route('home') }}" @if(request()->routeIs('home')) aria-current="page" @endif>Trang chủ</a>
+            <a href="{{ route('products.index') }}" @if(request()->routeIs('products.*')) aria-current="page" @endif>Cửa hàng</a>
             @guest
                 <a href="{{ route('login') }}" @if(request()->routeIs('login')) aria-current="page" @endif>Đăng nhập</a>
                 <a href="{{ route('register') }}" @if(request()->routeIs('register')) aria-current="page" @endif>Đăng ký</a>
@@ -50,6 +53,7 @@
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
                         <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
+                        <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
                     @endif
                 <form class="inline-form" method="POST" action="{{ route('logout') }}">
                     @csrf

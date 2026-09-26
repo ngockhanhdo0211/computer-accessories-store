@@ -21,5 +21,13 @@
         "theme": "Grid",
         "enrichment": "hand-built decorative peripheral SVG",
         "brief": "Storefront, authentication, and foundation dashboard UI for a computer accessories store"
+    },
+    {
+        "date": "2026-09-26",
+        "scope": "feature",
+        "macrostructure": "Editorial catalog / admin media workbench",
+        "theme": "Grid",
+        "enrichment": "none",
+        "brief": "Product catalog foundation with public listing, detail, and admin media workbench"
     }
 ]
