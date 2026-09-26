@@ -27,6 +27,7 @@
                     <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
+                        <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
                     @endif
                     <form class="inline-form" method="POST" action="{{ route('logout') }}">
                         @csrf
@@ -48,6 +49,7 @@
                 <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
+                        <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
                     @endif
                 <form class="inline-form" method="POST" action="{{ route('logout') }}">
                     @csrf

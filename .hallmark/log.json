@@ -1,5 +1,13 @@
 [
     {
+        "date": "2026-09-24",
+        "scope": "component",
+        "macrostructure": "Admin workbench / data ledger",
+        "theme": "Grid",
+        "enrichment": "none",
+        "brief": "Admin Brand management list and forms within the existing visual system"
+    },
+    {
         "date": "2026-09-19",
         "scope": "app",
         "macrostructure": "Retail editorial / workbench",

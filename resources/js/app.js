@@ -28,7 +28,10 @@ if (toggle && mobileNav) {
 }
 document.querySelectorAll('[data-confirm-delete]').forEach((form) => {
     form.addEventListener('submit', (event) => {
-        if (!window.confirm('Xóa danh mục này? Thao tác chỉ thành công khi danh mục chưa được sử dụng.')) {
+        const message = form.dataset.confirmDeleteMessage
+            ?? 'Xóa danh mục này? Thao tác chỉ thành công khi danh mục chưa được sử dụng.';
+
+        if (!window.confirm(message)) {
             event.preventDefault();
         }
     });

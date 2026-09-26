@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredCustomerController;
@@ -37,5 +38,6 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::resource('categories', CategoryController::class)->except('show');
+        Route::resource('brands', BrandController::class)->except('show');
     });
 });
