@@ -24,10 +24,11 @@ Website bán phụ kiện laptop với cảm giác cửa hàng công nghệ gọ
 - **Inventory:** workbench bảng dữ liệu thật, badge còn/sắp hết/hết hàng, form tác vụ tách khỏi Product, ledger dạng timeline chỉ đọc và danh sách phê duyệt có trạng thái bằng chữ.
 - **Cart:** bố cục danh sách sản phẩm và summary bất đối xứng, giá/tồn khả dụng từ dữ liệu thật, quantity dùng được bằng bàn phím, cảnh báo item không hợp lệ và empty state có đường về catalog; không hiển thị checkout giả.
 - **Shipping Rate:** workbench quản trị hai vùng cố định, nhấn mạnh mức phí VND thật và form chỉnh sửa đơn trường; không mô phỏng Checkout hoặc ưu đãi.
+- **Admin/Employee Workspace:** sidebar trái theo role, topbar gọn và main workbench rộng; desktop cố định, mobile dùng drawer có overlay, Escape, focus trap và scroll lock. Storefront tiếp tục dùng header ngang.
 
 ## Thành phần dùng chung
 
-Header, wordmark, footer, button, form, focus ring và thông báo dùng chung token. Mọi trang hỗ trợ 320px trở lên; link và nút không xuống dòng. Lỗi biểu mẫu hiển thị cạnh trường; tên người dùng luôn được Blade escape.
+Storefront header, workspace sidebar/topbar, wordmark, footer, button, form, focus ring và thông báo dùng chung token. Mọi trang hỗ trợ 320px trở lên; link và nút không xuống dòng. Lỗi biểu mẫu hiển thị cạnh trường; tên người dùng luôn được Blade escape.
 
 ## Ranh giới
 

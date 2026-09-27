@@ -1,4 +1,4 @@
-@extends('layouts.storefront')
+@extends('layouts.workspace')
 
 @section('title', 'Tổng quan quản trị')
 
@@ -10,7 +10,6 @@
             <h1>Tổng quan quản trị</h1>
             <p>Số liệu tài khoản và danh mục hiện có tại thời điểm mở trang.</p>
         </div>
-        <p class="admin-dashboard__identity">Đang xem với quyền Admin <strong>{{ auth()->user()->name }}</strong></p>
     </header>
 
     <section class="admin-dashboard__summary" aria-labelledby="summary-title">

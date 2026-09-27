@@ -1,4 +1,4 @@
-@extends('layouts.storefront')
+@extends(auth()->user()->isEmployee() ? 'layouts.workspace' : 'layouts.storefront')
 
 @section('title', 'Dashboard')
 

@@ -304,11 +304,13 @@ class CategoryManagementTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_admin_navigation_is_hidden_from_guest_and_customer(): void
+    public function test_admin_navigation_is_confined_to_the_workspace(): void
     {
         $link = 'href="'.route('admin.categories.index').'"';
         $this->get(route('home'))->assertDontSee($link, false);
         $this->actingAs(User::factory()->create())->get(route('home'))->assertDontSee($link, false);
-        $this->actingAs($this->admin())->get(route('home'))->assertSee($link, false);
+        $this->actingAs($this->admin())->get(route('home'))->assertDontSee($link, false);
+        $this->get(route('admin.categories.index'))->assertSee($link, false)
+            ->assertSee('aria-current="page"', false);
     }
 }

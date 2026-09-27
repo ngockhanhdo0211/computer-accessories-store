@@ -31,15 +31,6 @@
                     @endif
                     <span class="nav-user" title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</span>
                     <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
-                    @if (auth()->user()->isEmployee() || auth()->user()->isAdmin())
-                        <a href="{{ route('inventory.index') }}" @if(request()->routeIs('inventory.*')) aria-current="page" @endif>Tồn kho</a>
-                    @endif
-                    @if (auth()->user()->isAdmin())
-                        <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
-                        <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
-                        <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
-                        <a href="{{ route('admin.shipping-rates.index') }}" @if(request()->routeIs('admin.shipping-rates.*')) aria-current="page" @endif>Phí vận chuyển</a>
-                    @endif
                     <form class="inline-form" method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button class="link-button" type="submit">Đăng xuất</button>
@@ -62,15 +53,6 @@
                 @endif
                 <span class="nav-user">{{ auth()->user()->name }}</span>
                 <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
-                    @if (auth()->user()->isEmployee() || auth()->user()->isAdmin())
-                        <a href="{{ route('inventory.index') }}" @if(request()->routeIs('inventory.*')) aria-current="page" @endif>Tồn kho</a>
-                    @endif
-                    @if (auth()->user()->isAdmin())
-                        <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
-                        <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
-                        <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
-                        <a href="{{ route('admin.shipping-rates.index') }}" @if(request()->routeIs('admin.shipping-rates.*')) aria-current="page" @endif>Phí vận chuyển</a>
-                    @endif
                 <form class="inline-form" method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="link-button" type="submit">Đăng xuất</button>

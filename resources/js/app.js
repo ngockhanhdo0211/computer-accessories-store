@@ -124,3 +124,76 @@ document.querySelectorAll('[data-submit-once]').forEach((form) => {
         });
     });
 });
+const workspaceShell = document.querySelector('[data-workspace-shell]');
+
+if (workspaceShell) {
+    document.documentElement.classList.add('workspace-enhanced');
+
+    const workspaceSidebar = workspaceShell.querySelector('[data-workspace-sidebar]');
+    const workspaceToggle = workspaceShell.querySelector('[data-workspace-toggle]');
+    const workspaceClose = workspaceShell.querySelector('[data-workspace-close]');
+    const workspaceOverlay = workspaceShell.querySelector('[data-workspace-overlay]');
+    const workspaceDesktop = window.matchMedia('(min-width: 64.001rem)');
+    const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const setWorkspaceDrawer = (isOpen, restoreFocus = false) => {
+        const drawerOpen = !workspaceDesktop.matches && isOpen;
+
+        workspaceSidebar.dataset.open = String(drawerOpen);
+        workspaceToggle.setAttribute('aria-expanded', String(drawerOpen));
+        workspaceToggle.setAttribute('aria-label', drawerOpen ? 'Đóng menu quản trị' : 'Mở menu quản trị');
+        workspaceOverlay.hidden = !drawerOpen;
+        workspaceSidebar.inert = !workspaceDesktop.matches && !drawerOpen;
+        document.body.classList.toggle('workspace-drawer-open', drawerOpen);
+
+        if (drawerOpen) {
+            workspaceClose.focus();
+        } else if (restoreFocus && !workspaceDesktop.matches) {
+            workspaceToggle.focus();
+        }
+    };
+
+    workspaceToggle.addEventListener('click', () => {
+        setWorkspaceDrawer(workspaceToggle.getAttribute('aria-expanded') !== 'true');
+    });
+    workspaceClose.addEventListener('click', () => setWorkspaceDrawer(false, true));
+    workspaceOverlay.addEventListener('click', () => setWorkspaceDrawer(false, true));
+    workspaceSidebar.querySelectorAll('a[href]').forEach((link) => {
+        link.addEventListener('click', () => setWorkspaceDrawer(false));
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (workspaceToggle.getAttribute('aria-expanded') !== 'true') {
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            setWorkspaceDrawer(false, true);
+            return;
+        }
+
+        if (event.key === 'Tab') {
+            const focusable = Array.from(workspaceSidebar.querySelectorAll(focusableSelector));
+            const first = focusable.at(0);
+            const last = focusable.at(-1);
+
+            if (!first || !last) {
+                return;
+            }
+
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+    });
+
+    workspaceDesktop.addEventListener('change', () => setWorkspaceDrawer(false));
+    window.addEventListener('pageshow', () => setWorkspaceDrawer(false));
+    window.addEventListener('pagehide', () => document.body.classList.remove('workspace-drawer-open'));
+    setWorkspaceDrawer(false);
+}

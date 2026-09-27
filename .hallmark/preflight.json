@@ -9,11 +9,11 @@
     "scan": {
         "design_md": true,
         "existing_hallmark_memory": true,
-        "existing_css": "resources/css/app.css imports root tokens.css and Tailwind/Vite",
-        "existing_js": "resources/js/app.js handles existing mobile navigation and Category confirmation",
+        "existing_css": "resources/css/app.css imports root tokens.css and includes the role-aware workspace rail",
+        "existing_js": "resources/js/app.js isolates storefront navigation, workspace drawer, Category confirmation, Product media, and Inventory submit guards",
         "fonts": "Bahnschrift display and Segoe UI body through root tokens.css",
         "tokens": "root tokens.css",
-        "business_content": "accounts, Category/Brand management, Admin Dashboard Phase 1, public/admin Product catalog, Inventory Foundation, Customer Cart, and Shipping Rate Foundation exist; coupon, stock reservation, Checkout, Order, and payment remain pending"
+        "business_content": "accounts, role-aware Admin/Employee workspace, Category/Brand/Product management, Inventory Foundation, Customer Cart, and Shipping Rate Foundation exist; coupon, stock reservation, Checkout, Order, payment, and review remain pending"
     },
     "framework": "Laravel 12, Blade, Vite, Tailwind CSS directives",
     "palette": "warm light paper, graphite ink, ultramarine accent"

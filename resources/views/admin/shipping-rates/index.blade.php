@@ -1,4 +1,4 @@
-@extends('layouts.storefront')
+@extends('layouts.workspace')
 @section('title', 'Phí vận chuyển')
 @section('content')
 <div class="shell admin-page shipping-rate-page">

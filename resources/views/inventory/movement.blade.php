@@ -1,4 +1,4 @@
-@extends('layouts.storefront')
+@extends('layouts.workspace')
 
 @php($isDamaged = $mode === 'damaged')
 @section('title', $isDamaged ? 'Ghi nhận hàng hỏng' : 'Nhập kho')

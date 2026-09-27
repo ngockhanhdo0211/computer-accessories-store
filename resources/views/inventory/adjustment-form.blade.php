@@ -1,4 +1,4 @@
-@extends('layouts.storefront')
+@extends('layouts.workspace')
 
 @section('title', $direct ? 'Điều chỉnh kho trực tiếp' : 'Tạo đề nghị điều chỉnh')
 

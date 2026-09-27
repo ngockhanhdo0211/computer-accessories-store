@@ -1,6 +1,14 @@
 [
     {
         "date": "2026-09-27",
+        "scope": "app",
+        "macrostructure": "Workbench rail / responsive operations drawer",
+        "theme": "Grid",
+        "enrichment": "none",
+        "brief": "Role-aware Admin and Employee navigation shell with a desktop sidebar and accessible mobile drawer"
+    },
+    {
+        "date": "2026-09-27",
         "scope": "feature",
         "macrostructure": "Admin regional pricing workbench",
         "theme": "Grid",

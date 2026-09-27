@@ -1,4 +1,4 @@
-@extends('layouts.storefront')
+@extends('layouts.workspace')
 
 @section('title', 'Lịch sử tồn kho')
 

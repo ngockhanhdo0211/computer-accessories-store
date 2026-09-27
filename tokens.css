@@ -11,6 +11,7 @@
   --color-accent-ink: oklch(99% 0.003 255);
   --color-line: oklch(82% 0.011 255);
   --color-focus: oklch(37% 0.19 264);
+  --color-overlay: oklch(20% 0.018 255 / 0.58);
   --color-success: oklch(37% 0.10 158);
   --color-success-paper: oklch(94% 0.035 158);
   --color-warning: oklch(47% 0.10 82);
