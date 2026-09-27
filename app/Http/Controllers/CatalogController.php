@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CalculateAvailableStock;
 use App\Http\Requests\CatalogRequest;
 use App\Models\Brand;
 use App\Models\Category;
@@ -40,14 +41,15 @@ class CatalogController extends Controller
         ]);
     }
 
-    public function show(Product $product): View
+    public function show(Product $product, CalculateAvailableStock $availability): View
     {
         $product = Product::query()->publiclyVisible()
             ->with(['category:id,name,slug', 'brand:id,name,slug', 'images'])
             ->whereKey($product->id)
             ->firstOrFail();
+        $availableQuantity = $availability->forProduct($product);
 
-        return view('products.show', compact('product'));
+        return view('products.show', compact('product', 'availableQuantity'));
     }
 
     private function applySort(Builder $query, string $sort): void

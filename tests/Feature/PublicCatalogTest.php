@@ -176,19 +176,20 @@ class PublicCatalogTest extends TestCase
         $this->assertLessThan(strpos($html, 'Second image'), strpos($html, 'Primary image'));
     }
 
-    public function test_catalog_navigation_is_available_to_all_roles_without_cart_links(): void
+    public function test_catalog_navigation_is_available_to_all_roles_and_cart_is_customer_only(): void
     {
-        $users = [null, User::factory()->create(), User::factory()->employee()->create(), User::factory()->admin()->create()];
+        $guest = $this->get(route('home'))->assertOk()
+            ->assertSee('href="'.route('products.index').'"', false)
+            ->assertDontSee('href="'.route('cart.index').'"', false);
 
-        foreach ($users as $user) {
-            if ($user === null) {
-                $response = $this->get(route('home'));
-            } else {
-                $response = $this->actingAs($user)->get(route('home'));
-            }
-            $response->assertOk()
+        $customer = User::factory()->create();
+        $this->actingAs($customer)->get(route('home'))->assertOk()
+            ->assertSee('href="'.route('cart.index').'"', false);
+
+        foreach ([User::factory()->employee()->create(), User::factory()->admin()->create()] as $user) {
+            $this->actingAs($user)->get(route('home'))->assertOk()
                 ->assertSee('href="'.route('products.index').'"', false)
-                ->assertDontSee('href="/cart"', false)
+                ->assertDontSee('href="'.route('cart.index').'"', false)
                 ->assertDontSee('href="'.url('/checkout').'"', false);
         }
     }

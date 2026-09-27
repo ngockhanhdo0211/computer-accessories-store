@@ -24,6 +24,11 @@
                     <a href="{{ route('login') }}" @if(request()->routeIs('login')) aria-current="page" @endif>Đăng nhập</a>
                     <a class="button" href="{{ route('register') }}" @if(request()->routeIs('register')) aria-current="page" @endif>Đăng ký</a>
                 @else
+                    @if (auth()->user()->isCustomer())
+                        <a class="cart-nav-link" href="{{ route('cart.index') }}" @if(request()->routeIs('cart.*')) aria-current="page" @endif>
+                            Giỏ hàng <span class="cart-count" aria-label="{{ $cartItemCount }} dòng sản phẩm">{{ $cartItemCount }}</span>
+                        </a>
+                    @endif
                     <span class="nav-user" title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</span>
                     <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
                     @if (auth()->user()->isEmployee() || auth()->user()->isAdmin())
@@ -51,6 +56,9 @@
                 <a href="{{ route('login') }}" @if(request()->routeIs('login')) aria-current="page" @endif>Đăng nhập</a>
                 <a href="{{ route('register') }}" @if(request()->routeIs('register')) aria-current="page" @endif>Đăng ký</a>
             @else
+                @if (auth()->user()->isCustomer())
+                    <a href="{{ route('cart.index') }}" @if(request()->routeIs('cart.*')) aria-current="page" @endif>Giỏ hàng ({{ $cartItemCount }})</a>
+                @endif
                 <span class="nav-user">{{ auth()->user()->name }}</span>
                 <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
                     @if (auth()->user()->isEmployee() || auth()->user()->isAdmin())

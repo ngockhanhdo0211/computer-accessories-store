@@ -13,7 +13,7 @@
         "existing_js": "resources/js/app.js handles existing mobile navigation and Category confirmation",
         "fonts": "Bahnschrift display and Segoe UI body through root tokens.css",
         "tokens": "root tokens.css",
-        "business_content": "accounts, Category/Brand management, Admin Dashboard Phase 1, and public/admin Product catalog and Inventory Foundation exist; Cart, Order, and checkout remain pending"
+        "business_content": "accounts, Category/Brand management, Admin Dashboard Phase 1, public/admin Product catalog, Inventory Foundation, and Customer Cart exist; stock reservation, Checkout, Order, and payment remain pending"
     },
     "framework": "Laravel 12, Blade, Vite, Tailwind CSS directives",
     "palette": "warm light paper, graphite ink, ultramarine accent"

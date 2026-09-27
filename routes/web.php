@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductImageController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredCustomerController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\InventoryController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,13 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+
+    Route::middleware('role:customer')->prefix('cart')->name('cart.')->group(function () {
+        Route::get('/', [CartController::class, 'index'])->name('index');
+        Route::post('/items/{product}', [CartController::class, 'store'])->name('items.store');
+        Route::patch('/items/{cartItem}', [CartController::class, 'update'])->name('items.update');
+        Route::delete('/items/{cartItem}', [CartController::class, 'destroy'])->name('items.destroy');
+    });
 
     Route::get('/dashboard', function () {
         $role = UserRole::tryFrom((string) request()->user()->getRawOriginal('role'));

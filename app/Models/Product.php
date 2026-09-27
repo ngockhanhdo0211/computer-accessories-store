@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use UnexpectedValueException;
 
 class Product extends Model
 {
@@ -115,7 +116,25 @@ class Product extends Model
 
     public function effectivePriceVnd(): int
     {
-        return $this->sale_price_vnd ?? $this->price_vnd;
+        if ($this->price_vnd < 1) {
+            throw new UnexpectedValueException('Product price must be a positive integer.');
+        }
+
+        return $this->hasValidSalePrice() ? $this->sale_price_vnd : $this->price_vnd;
+    }
+
+    public function hasValidSalePrice(): bool
+    {
+        return $this->sale_price_vnd !== null
+            && $this->sale_price_vnd > 0
+            && $this->sale_price_vnd < $this->price_vnd;
+    }
+
+    public function isPubliclyEligible(): bool
+    {
+        return ProductVisibility::tryFrom((string) $this->getRawOriginal('visibility')) === ProductVisibility::Active
+            && (bool) $this->category?->is_visible
+            && (bool) $this->brand?->is_visible;
     }
 
     public function formattedPrice(): string
@@ -126,5 +145,10 @@ class Product extends Model
     public function isInStock(): bool
     {
         return $this->sellable_quantity > 0;
+    }
+
+    public function cartItems(): HasMany
+    {
+        return $this->hasMany(CartItem::class);
     }
 }

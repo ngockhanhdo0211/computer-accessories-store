@@ -32,10 +32,29 @@
             <h1>{{ $product->name }}</h1>
             <p class="product-detail__sku">SKU {{ $product->sku }}</p>
             <p class="product-detail__price">{{ $product->formattedPrice() }}</p>
-            @if ($product->sale_price_vnd !== null)
+            @if ($product->hasValidSalePrice())
                 <p class="product-detail__original-price">Giá gốc: <s>{{ number_format($product->price_vnd, 0, ',', '.') }} ₫</s></p>
             @endif
-            <p class="product-detail__stock">{{ $product->isInStock() ? 'Còn hàng' : 'Tạm hết hàng' }}</p>
+            <p class="product-detail__stock">{{ $availableQuantity > 0 ? "Còn hàng · {$availableQuantity} sản phẩm khả dụng" : 'Tạm hết hàng' }}</p>
+
+            @if ($availableQuantity > 0)
+                @auth
+                    @if (auth()->user()->isCustomer())
+                        <form class="product-cart-form" method="POST" action="{{ route('cart.items.store', $product) }}">
+                            @csrf
+                            <div class="field">
+                                <label for="product-quantity">Số lượng</label>
+                                <input id="product-quantity" name="quantity" type="number" min="1" max="{{ $availableQuantity }}" value="{{ old('quantity', 1) }}" inputmode="numeric" required>
+                                @error('quantity')<span class="field-error" role="alert">{{ $message }}</span>@enderror
+                                @error('product')<span class="field-error" role="alert">{{ $message }}</span>@enderror
+                            </div>
+                            <button class="button" type="submit">Thêm vào giỏ</button>
+                        </form>
+                    @endif
+                @else
+                    <a class="button product-cart-login" href="{{ route('login') }}">Đăng nhập để thêm vào giỏ</a>
+                @endauth
+            @endif
             <p class="product-detail__summary">{{ $product->short_description }}</p>
             <div class="product-detail__description">
                 <h2>Thông tin sản phẩm</h2>

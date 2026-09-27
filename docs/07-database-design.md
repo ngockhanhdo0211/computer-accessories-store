@@ -1,6 +1,6 @@
 # 07 — Thiết kế cơ sở dữ liệu triển khai
 
-Tài liệu này là thiết kế cho MariaDB/MySQL. Migration mở rộng `users` cho đăng ký customer đã triển khai; các bảng nghiệp vụ còn lại vẫn là kế hoạch. Baseline Laravel có `users`, `password_reset_tokens`, `sessions`, cache và queue mặc định. Đề xuất **24 bảng nghiệp vụ mới và mở rộng `users`**; không tạo bảng `payments` riêng: `payment_attempts` là hồ sơ giao dịch VNPay, còn `orders.payment_status` là trạng thái thanh toán của đơn (COD hoặc VNPay). Kho phiên bản đầu chỉ có một địa điểm nên không cần bảng `warehouses`.
+Tài liệu này là thiết kế cho MariaDB/MySQL. Các migration `users`, Category, Brand, Product/Image, Inventory/Audit và `cart_items` đã triển khai; các bảng nghiệp vụ còn lại vẫn là kế hoạch. Baseline Laravel có `users`, `password_reset_tokens`, `sessions`, cache và queue mặc định. Đề xuất **24 bảng nghiệp vụ mới và mở rộng `users`**; không tạo bảng `payments` riêng: `payment_attempts` là hồ sơ giao dịch VNPay, còn `orders.payment_status` là trạng thái thanh toán của đơn (COD hoặc VNPay). Kho phiên bản đầu chỉ có một địa điểm nên không cần bảng `warehouses`.
 
 ## Quy ước và nguyên tắc
 
@@ -70,7 +70,7 @@ erDiagram
 
 | Bảng và mục đích | Cột riêng | Khóa/ràng buộc, xóa và snapshot |
 | --- | --- | --- |
-| `cart_items` — giỏ hiện tại theo customer | `user_id BIGINT!`, `product_id BIGINT!`, `quantity INT UNSIGNED!`, timestamps. | FK user/product RESTRICT; `UQ(user_id,product_id)`, quantity >0. Không lưu giá vì server tính lại; xóa cứng dòng giỏ khi checkout thành công, không soft delete. |
+| `cart_items` — giỏ hiện tại theo customer | **Đã triển khai:** `user_id BIGINT!`, `product_id BIGINT!`, `quantity INT UNSIGNED!`, timestamps. | FK user/product RESTRICT; `UQ(user_id,product_id)`, index `(user_id,id)`, named CHECK/guard tương đương `quantity > 0`. Không lưu giá, subtotal hoặc tồn vì server tính lại từ Product hiện tại; Cart không giữ kho, không tạo ledger và không soft delete. Chỉ Customer active dùng endpoint; database không thể CHECK role qua FK. |
 | `shipping_rates` — cấu hình phí hiện tại | `region_key VARCHAR(16)!` (`ha_noi`/`other`), `fee_vnd BIGINT UNSIGNED!`, `updated_by BIGINT?`, timestamps. | `UQ(region_key)`, fee ≥0; FK updated_by SET NULL. Hai bản ghi cấu hình 30.000/45.000 VND lúc khởi tạo dữ liệu. Sửa phí có audit; order/attempt lưu snapshot nên bảng hiện tại không cần lịch sử riêng. Không hard delete. |
 | `payment_attempts` — ý định checkout VNPay và giao dịch có/không có order | `user_id BIGINT!`, `shipping_rate_id BIGINT!`, `request_key CHAR(36)!`, `gateway_reference VARCHAR(100)!`, `gateway_transaction_id VARCHAR(100)?`, `status VARCHAR(20)!=chua_thanh_toan`, `amount_vnd BIGINT UNSIGNED!`, `items_snapshot_json JSON!`, `recipient_snapshot_json JSON!`, `pricing_snapshot_json JSON!`, `shipping_fee_vnd BIGINT UNSIGNED!`, `coupon_id BIGINT?`, `expires_at DATETIME(6)!`, `verified_at DATETIME(6)?`, `gateway_result_code VARCHAR(40)?`, `late_callback_exception BOOLEAN!=0`, timestamps. | FK user/rate/coupon RESTRICT. `UQ(user_id,request_key)`, `UQ(gateway_reference)`, `UQ(gateway_transaction_id)` khi khác NULL. Chỉ lưu thông tin đã xác minh, không secret/payload thô. Flag ngoại lệ callback muộn ghi audit; snapshot JSON có product ID/SKU, quantity, unit price sau promotion, recipient, địa chỉ, coupon type/scope/value/targets, phân bổ, shipping và tổng; immutable sau chuyển cổng. Không hard/soft delete. |
 | `stock_reservations` — giữ từng sản phẩm cho attempt 15 phút | `payment_attempt_id BIGINT!`, `product_id BIGINT!`, `quantity INT UNSIGNED!`, `expires_at DATETIME(6)!`, `released_at DATETIME(6)?`, `consumed_at DATETIME(6)?`, timestamps. | FK attempt/product RESTRICT, `UQ(payment_attempt_id,product_id)`, quantity >0, chỉ một trong released/consumed có giá trị. Còn hiệu lực khi cả hai NULL và `expires_at > UTC_NOW`; hết hạn tự ngừng tính available dù job giải phóng chạy muộn. Không soft/hard delete, phục vụ truy vết. |
@@ -165,7 +165,7 @@ Mọi FK dùng `ON UPDATE RESTRICT`; bảng sau nêu `ON DELETE`. Các cột cù
 | `categories`, `brands` | `UQ(slug)` mỗi bảng | `categories(parent_id,is_visible)`; `brands(is_visible)` cho menu/admin. |
 | `products` | `UQ(sku)`, `UQ(slug)` | `(category_id,visibility,id)`, `(brand_id,visibility,id)`, `(visibility,created_at,id)`, `(visibility,price_vnd,id)` cho catalog/filter/sort. |
 | `product_images` | `UQ(product_id,path)` | `(product_id,is_primary,sort_order)` cho ảnh đại diện và thứ tự. |
-| `cart_items` | `UQ(user_id,product_id)` | UQ đủ lấy giỏ; FK product cần index. |
+| `cart_items` | `UQ(user_id,product_id)` | `(user_id,id)` cho tải giỏ ổn định; FK product có index phục vụ quan hệ. |
 | `shipping_rates` | `UQ(region_key)` | UQ đủ tra phí. |
 | `payment_attempts` | `UQ(user_id,request_key)`, `UQ(gateway_reference)`, `UQ(gateway_transaction_id)` | `(user_id,created_at)`, `(status,expires_at)` cho lịch sử/đối soát. Nhiều NULL được phép ở UQ gateway transaction. |
 | `stock_reservations` | `UQ(payment_attempt_id,product_id)` | `(product_id,released_at,consumed_at,expires_at)` để tính giữ hàng; `(expires_at,released_at,consumed_at)` cho job dọn. |
@@ -205,6 +205,15 @@ Các CHECK đã triển khai: `products_price_vnd_check`, `products_sale_price_v
 Ảnh dùng disk `public`, thư mục `products/{id}`, tên UUID do server tạo; chỉ nhận nội dung có MIME thực tế JPEG, PNG hoặc WebP, tối đa 5 MB mỗi ảnh và 8 ảnh mỗi product. Path không mass assign từ request. Giới hạn 8 ảnh và invariant một ảnh đại diện được bảo vệ bằng transaction cùng khóa hàng Product; không dùng `UNIQUE(product_id,is_primary)` vì constraint đó cũng chỉ cho phép một hàng `false`. File mới được dọn nếu upload giữa chừng hoặc ghi metadata thất bại. Xóa ảnh/Product đăng ký cleanup vật lý bằng `afterCommit`, vì vậy rollback transaction ngoài không làm mất file; cleanup chỉ chấp nhận path một cấp trong `products/{id}`. Xóa Product bị FK nghiệp vụ từ chối thì transaction phục hồi metadata và không xóa file. File đã mất được xem là cleanup hoàn tất; lỗi storage sau commit được ghi log để xử lý lại.
 
 Projection `sellable_quantity`, `damaged_quantity`, `sold_quantity` và `low_stock_threshold` không xuất hiện trong form Product; Catalog tạo mặc định 0/0/0/5. Inventory Foundation đã triển khai writer riêng cho `import`, `damaged` và `manual_adjustment`; `sale`, `cancel_restore` và stock reservation chưa được kích hoạt. Giá hiện hành được tính từ `sale_price_vnd` khi có giá trị hợp lệ, ngược lại dùng `price_vnd`; CHECK giữ invariant `0 < sale_price_vnd < price_vnd`. Search tên/SKU dùng binding và escape `%`, `_`, `!` để chúng mang nghĩa ký tự literal.
+## Cart Foundation đã triển khai
+
+Migration create_cart_items_table chạy trên MariaDB 10.4.32 và SQLite test. MariaDB dùng named CHECK cart_items_quantity_check; SQLite dùng hai trigger có tên ổn định cho INSERT/UPDATE vì không hỗ trợ ALTER TABLE ADD/DROP CHECK tương đương. Partial-state guard dừng khi bảng đã tồn tại và không tự DROP dữ liệu. down() chỉ gỡ cart_items; chỉ dùng riêng migration này sau khi xác nhận an toàn.
+
+Application khóa Product trước Cart item trong transaction, kiểm tra lại Product/Category/Brand public và số lượng trước khi ghi. UQ(user_id,product_id) là lớp bảo vệ cuối chống dòng trùng; thêm lại tăng quantity trên cùng dòng. Giá và subtotal VND là integer tính từ giá Product hiện tại; Cart không nhận user/price/subtotal/stock từ client, không đổi projection kho và không tạo inventory transaction.
+
+Công thức availability giữ nguyên: max(0, sellable_quantity - active_reserved_quantity). Trong slice Cart, `active_reserved_quantity = 0` vì `stock_reservations` chưa được phép tạo trước dependency `payment_attempts`; service nhận tổng reservation theo batch để giữ contract tính toán, còn aggregate theo thời gian sẽ được nối khi schema reservation hợp lệ. Storefront hiển thị tồn khả dụng theo contract này; Inventory tiếp tục hiển thị physical projection.
+
+stock_reservations vẫn thuộc bước 4 của thứ tự migration: phải tạo payment_attempts trước vì payment_attempt_id là FK bắt buộc và UQ(payment_attempt_id,product_id) là idempotency scope. Slice Checkout/VNPay sẽ tạo reservation 15 phút, aggregate active theo UTC, reserve/release/consume và test concurrency. Không có enum, bảng, route checkout hay reference thay thế trong Cart Foundation.
 ## CHECK domain của `users` đã triển khai
 
 | Constraint | Biểu thức |
@@ -228,7 +237,7 @@ SQLite 3.39.2 không hỗ trợ thêm/gỡ table CHECK trực tiếp trên bản
 
 1. Mở rộng `users` bằng migration mới cho hồ sơ (phone/gender/dob/address), role/status/current_tier, membership_spending, last_login_at và must_change_password; giữ `password_reset_tokens`, `sessions` mặc định. `audit_logs` đã được tạo trong Inventory Foundation; `membership_histories` thuộc slice thành viên sau.
 2. Tạo `categories` (self FK sau khi có bảng), `brands`, `shipping_rates`, `coupons`.
-3. **Đã tạo `products`, `product_images` và `inventory_adjustment_requests`.** `cart_items` và ba bảng target coupon thuộc các slice sau.
+3. **Đã tạo `products`, `product_images`, `inventory_adjustment_requests` và `cart_items`.** Ba bảng target coupon thuộc các slice sau.
 4. Tạo `payment_attempts` (sau user/rate/coupon), rồi `stock_reservations`.
 5. Tạo `orders`, `order_items`, `order_status_histories`, `coupon_usages`.
 6. Tạo `return_inspections`, `refunds`, `reviews`, `review_replies`.

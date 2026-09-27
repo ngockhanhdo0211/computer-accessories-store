@@ -37,5 +37,13 @@
         "theme": "Grid",
         "enrichment": "none",
         "brief": "Inventory foundation with immutable ledger, stock operations, approval workflow, and real dashboard metrics"
+    },
+    {
+        "date": "2026-09-27",
+        "scope": "feature",
+        "macrostructure": "Retail cart list / order summary",
+        "theme": "Grid",
+        "enrichment": "none",
+        "brief": "Customer Cart foundation with real pricing, availability states, and responsive line-item controls"
     }
 ]

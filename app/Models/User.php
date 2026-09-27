@@ -77,4 +77,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(InventoryAdjustmentRequest::class, 'requested_by');
     }
+
+    public function cartItems(): HasMany
+    {
+        return $this->hasMany(CartItem::class);
+    }
 }
