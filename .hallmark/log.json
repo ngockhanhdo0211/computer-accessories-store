@@ -1,5 +1,13 @@
 [
     {
+        "date": "2026-09-27",
+        "scope": "feature",
+        "macrostructure": "Admin regional pricing workbench",
+        "theme": "Grid",
+        "enrichment": "none",
+        "brief": "Shipping Rate Foundation with two fixed regional fees and an accessible single-field editor"
+    },
+    {
         "date": "2026-09-24",
         "scope": "component",
         "macrostructure": "Admin workbench / data ledger",

@@ -23,6 +23,7 @@ Website bán phụ kiện laptop với cảm giác cửa hàng công nghệ gọ
 - **Product Admin:** workbench mật độ vừa, hàng dữ liệu thay cho card dashboard; form chia thông tin và media, thư viện ảnh có thứ tự/primary rõ ràng.
 - **Inventory:** workbench bảng dữ liệu thật, badge còn/sắp hết/hết hàng, form tác vụ tách khỏi Product, ledger dạng timeline chỉ đọc và danh sách phê duyệt có trạng thái bằng chữ.
 - **Cart:** bố cục danh sách sản phẩm và summary bất đối xứng, giá/tồn khả dụng từ dữ liệu thật, quantity dùng được bằng bàn phím, cảnh báo item không hợp lệ và empty state có đường về catalog; không hiển thị checkout giả.
+- **Shipping Rate:** workbench quản trị hai vùng cố định, nhấn mạnh mức phí VND thật và form chỉnh sửa đơn trường; không mô phỏng Checkout hoặc ưu đãi.
 
 ## Thành phần dùng chung
 

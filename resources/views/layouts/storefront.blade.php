@@ -38,6 +38,7 @@
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
                         <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
                         <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
+                        <a href="{{ route('admin.shipping-rates.index') }}" @if(request()->routeIs('admin.shipping-rates.*')) aria-current="page" @endif>Phí vận chuyển</a>
                     @endif
                     <form class="inline-form" method="POST" action="{{ route('logout') }}">
                         @csrf
@@ -68,6 +69,7 @@
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
                         <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
                         <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
+                        <a href="{{ route('admin.shipping-rates.index') }}" @if(request()->routeIs('admin.shipping-rates.*')) aria-current="page" @endif>Phí vận chuyển</a>
                     @endif
                 <form class="inline-form" method="POST" action="{{ route('logout') }}">
                     @csrf

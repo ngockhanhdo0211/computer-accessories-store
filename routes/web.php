@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductImageController;
+use App\Http\Controllers\Admin\ShippingRateController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredCustomerController;
 use App\Http\Controllers\CartController;
@@ -74,6 +75,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('brands', BrandController::class)->except('show');
         Route::resource('products', ProductController::class)->except('show');
+        Route::resource('shipping-rates', ShippingRateController::class)->only(['index', 'edit', 'update']);
         Route::post('products/{product}/images', [ProductImageController::class, 'store'])
             ->name('products.images.store');
         Route::patch('products/{product}/images', [ProductImageController::class, 'update'])

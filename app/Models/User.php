@@ -82,4 +82,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(CartItem::class);
     }
+
+    public function updatedShippingRates(): HasMany
+    {
+        return $this->hasMany(ShippingRate::class, 'updated_by');
+    }
 }

@@ -610,3 +610,21 @@ h1, h2, h3 { min-width: 0; overflow-wrap: anywhere; font-family: var(--font-disp
   .cart-header h1 { font-size: clamp(2rem, 12vw, 3rem); }
   .cart-empty { padding: var(--space-6); }
 }
+/* Shipping Rate: fixed regional configuration within the admin workbench. */
+.shipping-rate-page { padding-block: var(--space-10) var(--space-16); }
+.shipping-rate-list { margin-top: var(--space-8); border-top: 3px solid var(--color-accent); }
+.shipping-rate-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, .45fr) auto; gap: var(--space-6); align-items: center; padding-block: var(--space-6); border-bottom: var(--border-thin) solid var(--color-line); }
+.shipping-rate-row h2 { margin: var(--space-1) 0 var(--space-2); font-size: var(--text-xl); }
+.shipping-rate-row p { margin: 0; color: var(--color-ink-muted); }
+.shipping-rate-row .section-label { color: var(--color-accent); }
+.shipping-rate-row__fee span, .shipping-rate-row__fee strong { display: block; }
+.shipping-rate-row__fee span { color: var(--color-ink-muted); font-size: var(--text-xs); text-transform: uppercase; }
+.shipping-rate-row__fee strong { margin-top: var(--space-1); font: 800 var(--text-xl)/1.2 var(--font-display); white-space: nowrap; }
+.shipping-rate-note { max-width: 58rem; margin-top: var(--space-8); line-height: 1.6; }
+.shipping-rate-page .form-panel { max-width: 46rem; }
+
+@media (max-width: 44rem) {
+  .shipping-rate-page { padding-top: var(--space-8); }
+  .shipping-rate-row { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+  .shipping-rate-row .button { justify-self: start; }
+}
