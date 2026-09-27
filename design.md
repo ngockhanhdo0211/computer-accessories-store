@@ -21,6 +21,7 @@ Website bán phụ kiện laptop với cảm giác cửa hàng công nghệ gọ
 - **Category/Brand:** danh sách dễ quét và form rõ nhãn, lỗi, trạng thái.
 - **Catalog công khai:** cấu trúc editorial hai cột với bộ lọc tách khỏi lưới sản phẩm; ảnh là điểm nhìn, giá và tồn kho dễ quét, placeholder trung thực; mobile chuyển về một cột.
 - **Product Admin:** workbench mật độ vừa, hàng dữ liệu thay cho card dashboard; form chia thông tin và media, thư viện ảnh có thứ tự/primary rõ ràng.
+- **Inventory:** workbench bảng dữ liệu thật, badge còn/sắp hết/hết hàng, form tác vụ tách khỏi Product, ledger dạng timeline chỉ đọc và danh sách phê duyệt có trạng thái bằng chữ.
 
 ## Thành phần dùng chung
 
@@ -28,7 +29,7 @@ Header, wordmark, footer, button, form, focus ring và thông báo dùng chung t
 
 ## Ranh giới
 
-Product Catalog đã dùng visual system này mà không thêm package hay dữ liệu giả. Cart, checkout, order, coupon, review và inventory workflow chưa có; không tạo CTA hoặc số liệu giả cho các phần đó.
+Product Catalog và Inventory Foundation dùng visual system này mà không thêm package hay dữ liệu giả. Cart, stock reservation, checkout, order, payment, refund, coupon và review chưa có; không tạo CTA hoặc số liệu giả cho các phần đó.
 
 ## Exports
 

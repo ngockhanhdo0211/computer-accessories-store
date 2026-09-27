@@ -109,3 +109,18 @@ document.querySelectorAll('[data-image-fallback]').forEach((image) => {
         showFallback();
     }
 });
+document.querySelectorAll('[data-submit-once]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+        const message = form.dataset.confirmAction;
+
+        if (message && !window.confirm(message)) {
+            event.preventDefault();
+            return;
+        }
+
+        form.querySelectorAll('button[type="submit"]').forEach((button) => {
+            button.disabled = true;
+            button.setAttribute('aria-disabled', 'true');
+        });
+    });
+});

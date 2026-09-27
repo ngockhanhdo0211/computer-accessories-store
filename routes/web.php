@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ProductImageController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredCustomerController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\InventoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -41,6 +42,25 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->middleware('role:employee')->name('employee.dashboard');
     Route::get('/admin/dashboard', AdminDashboardController::class)
         ->middleware('role:admin')->name('admin.dashboard');
+
+    Route::middleware('role:employee,admin')->prefix('inventory')->name('inventory.')->group(function () {
+        Route::get('/', [InventoryController::class, 'index'])->name('index');
+        Route::get('/adjustments', [InventoryController::class, 'adjustments'])->name('adjustments.index');
+        Route::get('/{product}/history', [InventoryController::class, 'history'])->name('history');
+        Route::get('/{product}/import', [InventoryController::class, 'importForm'])->name('import.form');
+        Route::post('/{product}/import', [InventoryController::class, 'import'])->name('import');
+        Route::get('/{product}/damaged', [InventoryController::class, 'damagedForm'])->name('damaged.form');
+        Route::post('/{product}/damaged', [InventoryController::class, 'damaged'])->name('damaged');
+        Route::get('/{product}/adjustments/create', [InventoryController::class, 'adjustmentForm'])->name('adjustments.create');
+        Route::post('/{product}/adjustments', [InventoryController::class, 'requestAdjustment'])->name('adjustments.store');
+
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/{product}/adjustments/direct', [InventoryController::class, 'directAdjustmentForm'])->name('adjustments.direct.form');
+            Route::post('/{product}/adjustments/direct', [InventoryController::class, 'directAdjustment'])->name('adjustments.direct');
+            Route::patch('/adjustments/{adjustment}/approve', [InventoryController::class, 'approve'])->name('adjustments.approve');
+            Route::patch('/adjustments/{adjustment}/reject', [InventoryController::class, 'reject'])->name('adjustments.reject');
+        });
+    });
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::resource('categories', CategoryController::class)->except('show');

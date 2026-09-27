@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Actions\GetAdminDashboardStats;
+use App\Models\Brand;
 use App\Models\Category;
+use App\Models\InventoryAdjustmentRequest;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +65,7 @@ class AdminDashboardTest extends TestCase
         $this->assertSame(['active' => 0, 'locked' => 0, 'inactive' => 0], $stats['users']['statuses']);
         $this->assertSame(['customer' => 0, 'employee' => 0, 'admin' => 0], $stats['users']['role_shares']);
         $this->assertSame(['total' => 0, 'roots' => 0, 'children' => 0, 'visible' => 0, 'hidden' => 0], $stats['categories']);
+        $this->assertSame(['products' => 0, 'low_stock' => 0, 'out_of_stock' => 0, 'pending_adjustments' => 0], $stats['inventory']);
 
         $values = [
             $stats['users']['total'],
@@ -69,6 +73,7 @@ class AdminDashboardTest extends TestCase
             ...array_values($stats['users']['statuses']),
             ...array_values($stats['users']['role_shares']),
             ...array_values($stats['categories']),
+            ...array_values($stats['inventory']),
         ];
 
         foreach ($values as $value) {
@@ -90,6 +95,15 @@ class AdminDashboardTest extends TestCase
         Category::factory()->hidden()->create();
         Category::factory()->create(['parent_id' => $visibleRoot->id]);
         Category::factory()->hidden()->create(['parent_id' => $visibleRoot->id]);
+        $brand = Brand::factory()->create();
+        $outOfStock = Product::factory()->for($visibleRoot)->for($brand)->create(['sellable_quantity' => 0]);
+        Product::factory()->for($visibleRoot)->for($brand)->create(['sellable_quantity' => 3, 'low_stock_threshold' => 5]);
+        Product::factory()->for($visibleRoot)->for($brand)->create(['sellable_quantity' => 5, 'low_stock_threshold' => 5]);
+        Product::factory()->for($visibleRoot)->for($brand)->create(['sellable_quantity' => 8, 'low_stock_threshold' => 5]);
+        InventoryAdjustmentRequest::factory()->create([
+            'product_id' => $outOfStock->id,
+            'requested_by' => User::query()->firstOrFail()->id,
+        ]);
 
         DB::flushQueryLog();
         DB::enableQueryLog();
@@ -100,7 +114,7 @@ class AdminDashboardTest extends TestCase
             DB::disableQueryLog();
         }
 
-        $this->assertCount(2, $queries);
+        $this->assertCount(3, $queries);
         $this->assertStringContainsString('group by', strtolower($queries[0]['query']));
         $this->assertStringNotContainsString('select *', strtolower($queries[0]['query']));
         $this->assertStringNotContainsString('email', strtolower($queries[0]['query']));
@@ -115,6 +129,7 @@ class AdminDashboardTest extends TestCase
         $this->assertSame(['total' => 4, 'roots' => 2, 'children' => 2, 'visible' => 2, 'hidden' => 2], $stats['categories']);
         $this->assertSame($stats['categories']['total'], $stats['categories']['roots'] + $stats['categories']['children']);
         $this->assertSame($stats['categories']['total'], $stats['categories']['visible'] + $stats['categories']['hidden']);
+        $this->assertSame(['products' => 4, 'low_stock' => 2, 'out_of_stock' => 1, 'pending_adjustments' => 1], $stats['inventory']);
         foreach ($stats['users']['role_shares'] as $share) {
             $this->assertGreaterThanOrEqual(0, $share);
             $this->assertLessThanOrEqual(100, $share);

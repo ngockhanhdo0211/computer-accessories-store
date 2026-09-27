@@ -26,6 +26,9 @@
                 @else
                     <span class="nav-user" title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</span>
                     <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
+                    @if (auth()->user()->isEmployee() || auth()->user()->isAdmin())
+                        <a href="{{ route('inventory.index') }}" @if(request()->routeIs('inventory.*')) aria-current="page" @endif>Tồn kho</a>
+                    @endif
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
                         <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
@@ -50,6 +53,9 @@
             @else
                 <span class="nav-user">{{ auth()->user()->name }}</span>
                 <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
+                    @if (auth()->user()->isEmployee() || auth()->user()->isAdmin())
+                        <a href="{{ route('inventory.index') }}" @if(request()->routeIs('inventory.*')) aria-current="page" @endif>Tồn kho</a>
+                    @endif
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
                         <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>

@@ -73,12 +73,22 @@
         </dl>
     </section>
 
+    <section class="admin-dashboard__categories" aria-labelledby="inventory-title">
+        <div class="admin-dashboard__section-head"><div><h2 id="inventory-title">Tồn kho</h2><p>Số liệu projection và đề nghị chờ duyệt tại thời điểm mở trang.</p></div><a class="text-link" href="{{ route('inventory.index') }}">Quản lý tồn kho</a></div>
+        <dl class="admin-dashboard__category-counts">
+            <div><dt>Tổng sản phẩm</dt><dd>{{ number_format($stats['inventory']['products'], 0, ',', '.') }}</dd></div>
+            <div><dt>Sắp hết</dt><dd>{{ number_format($stats['inventory']['low_stock'], 0, ',', '.') }}</dd></div>
+            <div><dt>Hết hàng</dt><dd>{{ number_format($stats['inventory']['out_of_stock'], 0, ',', '.') }}</dd></div>
+            <div><dt>Đề nghị chờ duyệt</dt><dd>{{ number_format($stats['inventory']['pending_adjustments'], 0, ',', '.') }}</dd></div>
+        </dl>
+    </section>
+
     <div class="admin-dashboard__lower">
         <section class="admin-dashboard__roadmap" aria-labelledby="roadmap-title">
             <h2 id="roadmap-title">Các phần tiếp theo</h2>
             <p>Những module này chưa có dữ liệu để thống kê.</p>
             <ul>
-                @foreach (['Thương hiệu', 'Sản phẩm', 'Giỏ hàng', 'Tồn kho', 'Đơn hàng', 'Đánh giá', 'Mã giảm giá'] as $module)
+                @foreach (['Giỏ hàng', 'Đơn hàng', 'Đánh giá', 'Mã giảm giá'] as $module)
                     <li><span>{{ $module }}</span><span>Chưa triển khai</span></li>
                 @endforeach
             </ul>
@@ -87,7 +97,9 @@
         <nav class="admin-dashboard__quick" aria-labelledby="quick-title">
             <h2 id="quick-title">Đi nhanh</h2>
             <p>Các trang đang hoạt động.</p>
-            <a class="button" href="{{ route('admin.categories.create') }}">Tạo danh mục</a>
+            <a class="button" href="{{ route('inventory.index') }}">Quản lý tồn kho</a>
+            <a class="button button--outline" href="{{ route('inventory.adjustments.index') }}">Duyệt điều chỉnh</a>
+            <a class="text-link" href="{{ route('admin.categories.create') }}">Tạo danh mục</a>
             <a class="button button--outline" href="{{ route('admin.categories.index') }}">Quản lý danh mục</a>
             <a class="text-link" href="{{ route('home') }}">Về trang chủ</a>
         </nav>

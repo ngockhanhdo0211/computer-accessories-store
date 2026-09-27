@@ -29,5 +29,13 @@
         "theme": "Grid",
         "enrichment": "none",
         "brief": "Product catalog foundation with public listing, detail, and admin media workbench"
+    },
+    {
+        "date": "2026-09-27",
+        "scope": "feature",
+        "macrostructure": "Operations ledger / approval queue",
+        "theme": "Grid",
+        "enrichment": "none",
+        "brief": "Inventory foundation with immutable ledger, stock operations, approval workflow, and real dashboard metrics"
     }
 ]

@@ -14,6 +14,9 @@
                 <span class="role-tag">{{ auth()->user()->role->label() }}</span>
                 <h2 id="welcome-title">Xin chào, {{ auth()->user()->name }}.</h2>
                 <p>Đây là dashboard nền tảng. Các module nghiệp vụ cho {{ auth()->user()->role->label() }} sẽ được xây dựng ở những giai đoạn tiếp theo.</p>
+                @if(auth()->user()->isEmployee())
+                    <a class="button" href="{{ route('inventory.index') }}">Mở quản lý tồn kho</a>
+                @endif
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="button button--outline" type="submit">Đăng xuất</button>

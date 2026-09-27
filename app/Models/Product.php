@@ -70,6 +70,16 @@ class Product extends Model
             ->orderBy('id');
     }
 
+    public function inventoryTransactions(): HasMany
+    {
+        return $this->hasMany(InventoryTransaction::class)->latest('created_at')->latest('id');
+    }
+
+    public function inventoryAdjustmentRequests(): HasMany
+    {
+        return $this->hasMany(InventoryAdjustmentRequest::class)->latest('created_at')->latest('id');
+    }
+
     public function scopePubliclyVisible(Builder $query): Builder
     {
         return $query
