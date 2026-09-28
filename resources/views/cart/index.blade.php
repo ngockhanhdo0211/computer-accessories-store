@@ -10,6 +10,10 @@
         <p>Giá và tồn khả dụng được tính lại từ dữ liệu hiện tại. Giỏ hàng chưa giữ tồn kho.</p>
     </header>
 
+    @error('cart')
+        <div class="alert alert--error" role="alert">{{ $message }}</div>
+    @enderror
+
     @if ($items->isEmpty())
         <section class="cart-empty" aria-labelledby="empty-cart-title">
             <p class="section-label">Chưa có sản phẩm</p>
@@ -91,6 +95,9 @@
                     <p class="cart-line__warning" role="alert">Tổng giỏ hàng quá lớn để tính an toàn. Hãy giảm số lượng trước khi tiếp tục.</p>
                 @endif
                 <p>Tổng tạm tính dùng giá sản phẩm hiện tại và sẽ được kiểm tra lại ở bước tiếp theo.</p>
+                @if (! $total_overflow && $items->isNotEmpty() && $items->where('isPurchasable', true)->count() === $items->count())
+                    <a class="button" href="{{ route('checkout.show') }}">Tiếp tục đến báo giá</a>
+                @endif
                 <a class="button button--outline" href="{{ route('products.index') }}">Tiếp tục mua sắm</a>
             </aside>
         </div>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PhoneNumberNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -32,15 +33,7 @@ class RegisterCustomerRequest extends FormRequest
         }
 
         if (is_string($this->input('phone'))) {
-            $phone = preg_replace('/[\s().-]+/u', '', trim($this->input('phone')));
-
-            if (str_starts_with($phone, '+84')) {
-                $phone = '0'.substr($phone, 3);
-            } elseif (str_starts_with($phone, '84') && strlen($phone) === 11) {
-                $phone = '0'.substr($phone, 2);
-            }
-
-            $normalized['phone'] = $phone;
+            $normalized['phone'] = PhoneNumberNormalizer::normalize($this->input('phone'));
         }
 
         $this->merge($normalized);

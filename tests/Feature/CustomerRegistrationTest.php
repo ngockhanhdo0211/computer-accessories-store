@@ -107,6 +107,17 @@ class CustomerRegistrationTest extends TestCase
         $this->assertDatabaseCount('users', 1);
     }
 
+    public function test_phone_rejects_boolean_array_scientific_and_malformed_values(): void
+    {
+        foreach ([true, ['0912345678'], '9.12345678e8', '09123A5678', '0212345678', '091234567'] as $phone) {
+            $this->post('/register', $this->validRegistration([
+                'phone' => $phone,
+            ]))->assertSessionHasErrors('phone');
+        }
+
+        $this->assertDatabaseCount('users', 0);
+    }
+
     public function test_invalid_gender_future_birth_date_and_mismatched_password_are_rejected(): void
     {
         $this->post('/register', $this->validRegistration([

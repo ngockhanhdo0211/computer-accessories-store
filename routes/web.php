@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredCustomerController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InventoryController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/items/{product}', [CartController::class, 'store'])->name('items.store');
         Route::patch('/items/{cartItem}', [CartController::class, 'update'])->name('items.update');
         Route::delete('/items/{cartItem}', [CartController::class, 'destroy'])->name('items.destroy');
+    });
+
+    Route::middleware('role:customer')->prefix('checkout')->name('checkout.')->group(function () {
+        Route::get('/', [CheckoutController::class, 'show'])->name('show');
+        Route::post('/quote', [CheckoutController::class, 'quote'])->name('quote');
     });
 
     Route::get('/dashboard', function () {

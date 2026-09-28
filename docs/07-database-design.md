@@ -216,7 +216,15 @@ Application khóa Product trước Cart item trong transaction, kiểm tra lại
 
 Công thức availability giữ nguyên: max(0, sellable_quantity - active_reserved_quantity). Trong slice Cart, `active_reserved_quantity = 0` vì `stock_reservations` chưa được phép tạo trước dependency `payment_attempts`; service nhận tổng reservation theo batch để giữ contract tính toán, còn aggregate theo thời gian sẽ được nối khi schema reservation hợp lệ. Storefront hiển thị tồn khả dụng theo contract này; Inventory tiếp tục hiển thị physical projection.
 
-stock_reservations vẫn thuộc bước 4 của thứ tự migration: phải tạo payment_attempts trước vì payment_attempt_id là FK bắt buộc và UQ(payment_attempt_id,product_id) là idempotency scope. Slice Checkout/VNPay sẽ tạo reservation 15 phút, aggregate active theo UTC, reserve/release/consume và test concurrency. Không có enum, bảng, route checkout hay reference thay thế trong Cart Foundation.
+stock_reservations vẫn thuộc bước 4 của thứ tự migration: phải tạo payment_attempts trước vì payment_attempt_id là FK bắt buộc và UQ(payment_attempt_id,product_id) là idempotency scope. Slice Checkout/VNPay sẽ tạo reservation 15 phút, aggregate active theo UTC, reserve/release/consume và test concurrency. Cart Foundation không tạo enum, bảng hay reference thay thế cho checkout.
+
+## Checkout Quote Foundation đã triển khai
+
+Customer active có hai route `GET /checkout` và `POST /checkout/quote`. Đây là luồng chỉ-đọc: server chuẩn hóa thông tin người nhận, đọc lại Cart cùng Product/Category/Brand, kiểm tra toàn bộ dòng còn công khai và đủ availability, tính lại giá hiện hành bằng số nguyên, tự ánh xạ tỉnh/thành sang `ha_noi` hoặc `other`, lấy `shipping_rates` hiện tại và dùng `EvaluateCoupon` cho các quy tắc definition đã có. Bất kỳ dòng giỏ không hợp lệ nào làm toàn bộ quote thất bại; dữ liệu tiền, vùng phí và snapshot do client gửi lên đều bị bỏ qua.
+
+Kết quả là các readonly value object trong phạm vi request gồm recipient, line items, shipping, coupon và tổng tiền; các invariant giữ `grand_total = cart_subtotal - product_discount + shipping_fee - shipping_discount`, discount không âm và không vượt phần tương ứng. Quote không được lưu vào session hay database và thay đổi cấu hình sau đó không làm đổi object đã trả trong request hiện tại.
+
+Foundation này không tạo migration/model cho Order, Payment Attempt, Stock Reservation hay Coupon Usage; không đặt hàng, không giữ/trừ kho, không giữ/tiêu lượt mã, không xóa giỏ và không ghi inventory transaction. `max_uses` và `max_uses_per_user` chưa thể được xác nhận khi chưa có usage ledger, nên quote chỉ dùng các quy tắc tĩnh của evaluator và phải được tính lại trong transaction ở slice đặt hàng/thanh toán sau.
 ## CHECK domain của `users` đã triển khai
 
 | Constraint | Biểu thức |

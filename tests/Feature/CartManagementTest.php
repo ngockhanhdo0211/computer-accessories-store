@@ -237,7 +237,7 @@ class CartManagementTest extends TestCase
         }
     }
 
-    public function test_header_count_is_real_line_count_and_cart_has_no_fake_checkout(): void
+    public function test_header_count_is_real_line_count_and_cart_links_to_checkout_quote(): void
     {
         $customer = User::factory()->create();
         foreach (Product::factory()->count(2)->inStock(10)->create() as $product) {
@@ -249,7 +249,7 @@ class CartManagementTest extends TestCase
             ->assertSee('name="_token"', false)
             ->assertSee('name="_method" value="PATCH"', false)
             ->assertSee('name="_method" value="DELETE"', false)
-            ->assertDontSee('/checkout', false)
+            ->assertSee(route('checkout.show'), false)
             ->assertDontSee('Thanh toán');
     }
 
@@ -305,7 +305,7 @@ class CartManagementTest extends TestCase
         }
     }
 
-    public function test_cart_routes_have_expected_methods_and_no_checkout_endpoint(): void
+    public function test_cart_routes_have_expected_methods(): void
     {
         $routes = collect(app('router')->getRoutes()->getRoutes());
 
@@ -313,7 +313,6 @@ class CartManagementTest extends TestCase
         $this->assertSame(['POST'], $routes->firstWhere('action.as', 'cart.items.store')->methods());
         $this->assertSame(['PATCH'], $routes->firstWhere('action.as', 'cart.items.update')->methods());
         $this->assertSame(['DELETE'], $routes->firstWhere('action.as', 'cart.items.destroy')->methods());
-        $this->assertFalse($routes->contains(fn ($route) => str_starts_with($route->uri(), 'checkout')));
     }
 
     public function test_money_rules_cover_current_price_exact_totals_and_overflow_safely(): void
