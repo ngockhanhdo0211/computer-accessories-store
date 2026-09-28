@@ -53,14 +53,20 @@ class BrandManagementTest extends TestCase
     public function test_admin_sees_empty_state_and_accessible_create_form(): void
     {
         $this->actingAs($this->admin())->get(route('admin.brands.index'))
-            ->assertOk()->assertSee('Chưa có thương hiệu')->assertSee('0 thương hiệu');
+            ->assertOk()
+            ->assertSee('Chưa có thương hiệu')
+            ->assertSee('0 thương hiệu')
+            ->assertSee('class="page-heading"', false)
+            ->assertSee('class="empty-state resource-empty-state"', false);
 
         $this->get(route('admin.brands.create'))->assertOk()
             ->assertSee('name="_token"', false)
             ->assertSee('label for="name"', false)
             ->assertSee('name="name"', false)
             ->assertSee('name="slug"', false)
-            ->assertSee('name="is_visible"', false);
+            ->assertSee('name="is_visible"', false)
+            ->assertSee('class="resource-form-layout"', false)
+            ->assertSee('class="action-group resource-form__actions"', false);
     }
 
     public function test_admin_creates_trimmed_brand_with_generated_slug_and_flash(): void
@@ -382,7 +388,8 @@ class BrandManagementTest extends TestCase
             ->assertRedirect(route('admin.brands.create'))->assertSessionHasErrors('name');
 
         $this->get(route('admin.brands.create'))->assertOk()
-            ->assertSee('id="name-error"', false)
+            ->assertSee('id="name-message"', false)
+            ->assertSee('aria-describedby="name-message"', false)
             ->assertSee('aria-invalid="true"', false)
             ->assertSee('Vui lòng nhập tên thương hiệu.')
             ->assertSee('value="kept-slug"', false);

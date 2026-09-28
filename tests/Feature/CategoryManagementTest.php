@@ -36,8 +36,20 @@ class CategoryManagementTest extends TestCase
 
     public function test_admin_can_view_empty_index_and_create_form(): void
     {
-        $this->actingAs($this->admin())->get(route('admin.categories.index'))->assertOk()->assertSee('Chưa có danh mục')->assertSee('Tạo danh mục');
-        $this->get(route('admin.categories.create'))->assertOk()->assertSee('name="_token"', false)->assertSee('name="name"', false);
+        $this->actingAs($this->admin())->get(route('admin.categories.index'))->assertOk()
+            ->assertSee('Chưa có danh mục')
+            ->assertSee('Tạo danh mục')
+            ->assertSee('class="category-index-header"', false)
+            ->assertSee('class="category-index-header__tools"', false)
+            ->assertSee('class="category-index-count"', false)
+            ->assertDontSee('category-masthead', false)
+            ->assertSee('class="empty-state category-empty-state"', false);
+        $this->get(route('admin.categories.create'))->assertOk()
+            ->assertSee('name="_token"', false)
+            ->assertSee('name="name"', false)
+            ->assertSee('class="category-form-masthead"', false)
+            ->assertSee('class="category-form-layout"', false)
+            ->assertSee('class="category-editor__actions"', false);
     }
 
     public function test_locked_and_inactive_admin_sessions_are_revoked(): void
@@ -62,7 +74,12 @@ class CategoryManagementTest extends TestCase
         Category::factory()->count(23)->create(['parent_id' => $parent->id]);
         DB::flushQueryLog();
         DB::enableQueryLog();
-        $this->get(route('admin.categories.index'))->assertOk()->assertSee('Thiết bị nhập')->assertSee('Bàn phím');
+        $this->get(route('admin.categories.index'))->assertOk()
+            ->assertSee('Thiết bị nhập')
+            ->assertSee('Bàn phím')
+            ->assertSee('class="category-catalog"', false)
+            ->assertSee('class="category-catalog__columns"', false)
+            ->assertSee('class="status-badge status-badge--success"', false);
         $this->assertLessThanOrEqual(4, count(DB::getQueryLog()));
     }
 
@@ -140,7 +157,8 @@ class CategoryManagementTest extends TestCase
     {
         $admin = $this->admin();
         $this->actingAs($admin)->from(route('admin.categories.create'))->post(route('admin.categories.store'), $this->payload(['name' => '']))->assertSessionHasErrors('name');
-        $this->get(route('admin.categories.create'))->assertOk()->assertSee('id="name-error"', false)
+        $this->get(route('admin.categories.create'))->assertOk()->assertSee('id="name-message"', false)
+            ->assertSee('aria-describedby="name-message"', false)
             ->assertSee('aria-invalid="true"', false)
             ->assertSee('Vui lòng nhập tên danh mục.');
         $category = Category::factory()->create();

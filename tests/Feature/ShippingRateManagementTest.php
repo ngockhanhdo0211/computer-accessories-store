@@ -68,6 +68,8 @@ class ShippingRateManagementTest extends TestCase
         $response = $this->get(route('admin.shipping-rates.index'))->assertOk()
             ->assertSee('Hà Nội')->assertSee('30.000 VND')
             ->assertSee('Tỉnh/thành khác')->assertSee('45.000 VND')
+            ->assertSee('class="resource-ledger"', false)
+            ->assertSee('class="resource-list resource-list--shipping"', false)
             ->assertSee('&lt;img src=x onerror=alert(1)&gt;', false)
             ->assertDontSee('<img src=x onerror=alert(1)>', false)
             ->assertDontSee('Checkout ngay');
@@ -263,7 +265,10 @@ class ShippingRateManagementTest extends TestCase
             ->assertSee('name="_token"', false)
             ->assertSee('name="_method" value="PUT"', false)
             ->assertSee('label for="fee_vnd"', false)
-            ->assertSee('inputmode="numeric"', false);
+            ->assertSee('inputmode="numeric"', false)
+            ->assertSee('aria-describedby="fee-vnd-message"', false)
+            ->assertSee('class="resource-form-layout"', false)
+            ->assertSee('class="action-group resource-form__actions"', false);
         $this->get('/admin/shipping-rates/missing/edit')->assertNotFound();
 
         $this->from(route('admin.shipping-rates.edit', $rate))
