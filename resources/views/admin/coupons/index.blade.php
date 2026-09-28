@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="shell admin-page coupon-page">
-    <header class="page-heading coupon-page-heading">
+    <header class="page-heading">
         <div>
             <p class="eyebrow">Khuyến mãi</p>
             <h1>Mã giảm giá</h1>
@@ -55,10 +55,10 @@
                             };
                             $now = now('UTC');
                             [$statusLabel, $statusClass] = match(true) {
-                                ! $coupon->is_active => ['Đã tắt', 'is-muted'],
-                                $now->lt($coupon->starts_at) => ['Chưa bắt đầu', 'is-upcoming'],
-                                $now->gt($coupon->ends_at) => ['Đã hết hạn', 'is-expired'],
-                                default => ['Đang hoạt động', 'is-active'],
+                                ! $coupon->is_active => ['Đã tắt', 'status-badge--neutral'],
+                                $now->lt($coupon->starts_at) => ['Chưa bắt đầu', 'status-badge--info'],
+                                $now->gt($coupon->ends_at) => ['Đã hết hạn', 'status-badge--warning'],
+                                default => ['Đang hoạt động', 'status-badge--success'],
                             };
                         @endphp
                         <tr>
@@ -112,10 +112,10 @@
                                 </dl>
                             </td>
                             <td data-label="Trạng thái">
-                                <span class="status-badge coupon-status {{ $statusClass }}">{{ $statusLabel }}</span>
+                                <span class="status-badge {{ $statusClass }}">{{ $statusLabel }}</span>
                             </td>
                             <td data-label="Thao tác">
-                                <div class="table-actions coupon-actions">
+                                <div class="action-group coupon-actions">
                                     <a class="text-link" href="{{ route('admin.coupons.edit', $coupon) }}">Sửa</a>
                                     <form method="POST" action="{{ route('admin.coupons.destroy', $coupon) }}" data-confirm-delete data-confirm-delete-message="Chỉ xóa mã chưa từng được sử dụng. Tiếp tục?">
                                         @csrf

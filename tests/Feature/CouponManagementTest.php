@@ -287,6 +287,12 @@ class CouponManagementTest extends TestCase
         $response = $this->actingAs($admin)->get(route('admin.coupons.index'))->assertOk();
 
         $response->assertSee('<div class="coupon-toolbar"', false)
+            ->assertSee('<header class="page-heading">', false)
+            ->assertSee('class="status-badge status-badge--success"', false)
+            ->assertSee('class="status-badge status-badge--info"', false)
+            ->assertSee('class="status-badge status-badge--warning"', false)
+            ->assertSee('class="status-badge status-badge--neutral"', false)
+            ->assertSee('class="action-group coupon-actions"', false)
             ->assertSee('<strong>5</strong> mã giảm giá', false)
             ->assertSee('<table class="coupon-table">', false)
             ->assertSee('<thead>', false)
@@ -316,6 +322,7 @@ class CouponManagementTest extends TestCase
     {
         $this->actingAs($this->admin())->get(route('admin.coupons.index'))
             ->assertOk()
+            ->assertSee('<section class="empty-state coupon-empty-state"', false)
             ->assertSee('Chưa có mã giảm giá')
             ->assertSee('href="'.route('admin.coupons.create').'"', false)
             ->assertDontSee('<table', false)
@@ -331,6 +338,8 @@ class CouponManagementTest extends TestCase
         $response = $this->actingAs($this->admin())->get(route('admin.coupons.create'))->assertOk();
 
         $response->assertSee('data-coupon-form', false)
+            ->assertSee('<div class="field">', false)
+            ->assertDontSee('field-group', false)
             ->assertSee('data-coupon-type', false)
             ->assertSee('data-coupon-value', false)
             ->assertSee('data-coupon-value-suffix', false)

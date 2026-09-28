@@ -18,6 +18,8 @@
   --color-warning-paper: oklch(96% 0.035 82);
   --color-error: oklch(43% 0.16 25);
   --color-error-paper: oklch(96% 0.026 25);
+  --color-danger: var(--color-error);
+  --color-danger-paper: var(--color-error-paper);
   --font-body: "Segoe UI", Tahoma, sans-serif;
   --font-display: Bahnschrift, "Arial Narrow", "Segoe UI", sans-serif;
   --font-mono: var(--font-body);
