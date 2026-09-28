@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductImageController;
 use App\Http\Controllers\Admin\ShippingRateController;
@@ -74,6 +75,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('brands', BrandController::class)->except('show');
+        Route::resource('coupons', CouponController::class)->except('show');
         Route::resource('products', ProductController::class)->except('show');
         Route::resource('shipping-rates', ShippingRateController::class)->only(['index', 'edit', 'update']);
         Route::post('products/{product}/images', [ProductImageController::class, 'store'])

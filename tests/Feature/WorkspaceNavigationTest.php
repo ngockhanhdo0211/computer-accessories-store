@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\ShippingRate;
 use App\Models\User;
@@ -21,6 +22,7 @@ class WorkspaceNavigationTest extends TestCase
         $category = Category::factory()->create();
         $brand = Brand::factory()->create();
         $product = Product::factory()->for($category)->for($brand)->create();
+        $coupon = Coupon::factory()->create();
         $rate = ShippingRate::query()->where('region_key', 'ha_noi')->firstOrFail();
 
         $urls = [
@@ -34,6 +36,9 @@ class WorkspaceNavigationTest extends TestCase
             route('admin.products.index'),
             route('admin.products.create'),
             route('admin.products.edit', $product),
+            route('admin.coupons.index'),
+            route('admin.coupons.create'),
+            route('admin.coupons.edit', $coupon),
             route('inventory.index'),
             route('admin.shipping-rates.index'),
             route('admin.shipping-rates.edit', $rate),
@@ -64,7 +69,7 @@ class WorkspaceNavigationTest extends TestCase
             ->assertDontSee('href="'.route('admin.brands.index').'"', false)
             ->assertDontSee('href="'.route('admin.products.index').'"', false)
             ->assertDontSee('href="'.route('admin.shipping-rates.index').'"', false)
-            ->assertDontSee('/admin/coupons', false)
+            ->assertDontSee('href="'.route('admin.coupons.index').'"', false)
             ->assertDontSee('/admin/orders', false)
             ->assertDontSee('/admin/reviews', false);
     }
@@ -86,6 +91,7 @@ class WorkspaceNavigationTest extends TestCase
             ->assertDontSee('data-workspace-shell', false)
             ->assertDontSee('href="'.route('inventory.index').'"', false)
             ->assertDontSee('href="'.route('admin.categories.index').'"', false)
+            ->assertDontSee('href="'.route('admin.coupons.index').'"', false)
             ->assertDontSee('href="'.route('admin.shipping-rates.index').'"', false);
     }
 
@@ -108,7 +114,7 @@ class WorkspaceNavigationTest extends TestCase
             ->assertSee('aria-controls="workspace-sidebar"', false)
             ->assertSee('data-workspace-overlay', false)
             ->assertSee('href="#workspace-main"', false)
-            ->assertDontSee('/admin/coupons', false)
+            ->assertSee('href="'.route('admin.coupons.index').'"', false)
             ->assertDontSee('/admin/orders', false)
             ->assertDontSee('/admin/customers', false)
             ->assertDontSee('/admin/reviews', false)
@@ -122,6 +128,7 @@ class WorkspaceNavigationTest extends TestCase
         $category = Category::factory()->create();
         $brand = Brand::factory()->create();
         $product = Product::factory()->for($category)->for($brand)->create();
+        $coupon = Coupon::factory()->create();
         $rate = ShippingRate::query()->where('region_key', 'ha_noi')->firstOrFail();
         $this->actingAs($admin);
 
@@ -134,6 +141,9 @@ class WorkspaceNavigationTest extends TestCase
             [route('admin.brands.edit', $brand), route('admin.brands.index')],
             [route('admin.products.index'), route('admin.products.index')],
             [route('admin.products.edit', $product), route('admin.products.index')],
+            [route('admin.coupons.index'), route('admin.coupons.index')],
+            [route('admin.coupons.create'), route('admin.coupons.index')],
+            [route('admin.coupons.edit', $coupon), route('admin.coupons.index')],
             [route('inventory.index'), route('inventory.index')],
             [route('inventory.history', $product), route('inventory.index')],
             [route('admin.shipping-rates.index'), route('admin.shipping-rates.index')],
@@ -178,6 +188,7 @@ class WorkspaceNavigationTest extends TestCase
             'admin.categories.index' => ['web', 'auth', 'active', 'role:admin'],
             'admin.brands.index' => ['web', 'auth', 'active', 'role:admin'],
             'admin.products.index' => ['web', 'auth', 'active', 'role:admin'],
+            'admin.coupons.index' => ['web', 'auth', 'active', 'role:admin'],
             'inventory.index' => ['web', 'auth', 'active', 'role:employee,admin'],
             'admin.shipping-rates.index' => ['web', 'auth', 'active', 'role:admin'],
         ] as $name => $middleware) {

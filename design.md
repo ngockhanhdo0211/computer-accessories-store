@@ -24,6 +24,7 @@ Website bán phụ kiện laptop với cảm giác cửa hàng công nghệ gọ
 - **Inventory:** workbench bảng dữ liệu thật, badge còn/sắp hết/hết hàng, form tác vụ tách khỏi Product, ledger dạng timeline chỉ đọc và danh sách phê duyệt có trạng thái bằng chữ.
 - **Cart:** bố cục danh sách sản phẩm và summary bất đối xứng, giá/tồn khả dụng từ dữ liệu thật, quantity dùng được bằng bàn phím, cảnh báo item không hợp lệ và empty state có đường về catalog; không hiển thị checkout giả.
 - **Shipping Rate:** workbench quản trị hai vùng cố định, nhấn mạnh mức phí VND thật và form chỉnh sửa đơn trường; không mô phỏng Checkout hoặc ưu đãi.
+- **Coupon Definition:** ledger quản trị mã và editor target theo scope trong workspace; không hiển thị lượt dùng giả hoặc mô phỏng luồng Apply Coupon/Checkout.
 - **Admin/Employee Workspace:** sidebar trái theo role, topbar gọn và main workbench rộng; desktop cố định, mobile dùng drawer có overlay, Escape, focus trap và scroll lock. Storefront tiếp tục dùng header ngang.
 
 ## Thành phần dùng chung
@@ -32,7 +33,7 @@ Storefront header, workspace sidebar/topbar, wordmark, footer, button, form, foc
 
 ## Ranh giới
 
-Product Catalog, Inventory Foundation và Customer Cart dùng visual system này mà không thêm package hay dữ liệu giả. Cart chỉ quản lý dòng hàng, giá và tồn khả dụng hiện tại; stock reservation, checkout, order, payment, refund, coupon và review chưa có, nên không tạo CTA hoặc số liệu cho các phần đó.
+Product Catalog, Inventory Foundation và Customer Cart dùng visual system này mà không thêm package hay dữ liệu giả. Cart chỉ quản lý dòng hàng, giá và tồn khả dụng hiện tại; stock reservation, checkout, order, payment, refund, coupon usage và review chưa có, nên không tạo CTA hoặc số liệu cho các phần đó.
 
 ## Exports
 

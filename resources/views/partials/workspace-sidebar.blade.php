@@ -29,6 +29,13 @@
             </div>
         @endif
 
+        @if (auth()->user()->isAdmin())
+            <div class="workspace-nav__group">
+                <p class="workspace-nav__label">Khuyến mãi</p>
+                <a href="{{ route('admin.coupons.index') }}" @if(request()->routeIs('admin.coupons.*')) aria-current="page" @endif>Mã giảm giá</a>
+            </div>
+        @endif
+
         <div class="workspace-nav__group">
             <p class="workspace-nav__label">Vận hành</p>
             <a href="{{ route('inventory.index') }}" @if(request()->routeIs('inventory.*')) aria-current="page" @endif>Tồn kho</a>

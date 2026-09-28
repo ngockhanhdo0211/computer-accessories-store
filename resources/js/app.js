@@ -197,3 +197,70 @@ if (workspaceShell) {
     window.addEventListener('pagehide', () => document.body.classList.remove('workspace-drawer-open'));
     setWorkspaceDrawer(false);
 }
+
+
+const couponFieldGrid = document.querySelector('[data-coupon-form]');
+
+if (couponFieldGrid) {
+    const couponEditor = couponFieldGrid.closest('form');
+    const typeSelect = couponEditor?.querySelector('[data-coupon-type]');
+    const valueInput = couponEditor?.querySelector('[data-coupon-value]');
+    const valueSuffix = couponEditor?.querySelector('[data-coupon-value-suffix]');
+    const valueHelp = couponEditor?.querySelector('[data-coupon-value-help]');
+    const scopeSelect = couponEditor?.querySelector('[data-coupon-scope]');
+    const targetGroups = Array.from(couponEditor?.querySelectorAll('[data-coupon-target-group]') ?? []);
+    let previousType = typeSelect?.value;
+
+    const syncCouponValue = () => {
+        if (!typeSelect || !valueInput || !valueSuffix || !valueHelp) {
+            return;
+        }
+
+        if (typeSelect.value === 'free_shipping') {
+            if (previousType !== 'free_shipping' && valueInput.value !== '0') {
+                valueInput.dataset.previousValue = valueInput.value;
+            }
+
+            valueInput.value = '0';
+            valueInput.readOnly = true;
+            valueSuffix.textContent = 'VND';
+            valueHelp.textContent = 'Miễn phí vận chuyển luôn có giá trị 0 VND.';
+        } else {
+            if (previousType === 'free_shipping' && valueInput.dataset.previousValue) {
+                valueInput.value = valueInput.dataset.previousValue;
+            }
+
+            valueInput.readOnly = false;
+            valueSuffix.textContent = typeSelect.value === 'percent' ? '%' : 'VND';
+            valueHelp.textContent = typeSelect.value === 'percent'
+                ? 'Chỉ nhập số nguyên từ 1 đến 100.'
+                : 'Nhập số tiền giảm bằng VND, không dùng dấu phân cách.';
+        }
+
+        previousType = typeSelect.value;
+    };
+
+    const syncCouponTargets = (clearInactive = false) => {
+        if (!scopeSelect) {
+            return;
+        }
+
+        targetGroups.forEach((group) => {
+            const active = group.dataset.couponTargetGroup === scopeSelect.value;
+            group.hidden = !active;
+
+            group.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+                input.disabled = !active;
+
+                if (!active && clearInactive) {
+                    input.checked = false;
+                }
+            });
+        });
+    };
+
+    typeSelect?.addEventListener('change', syncCouponValue);
+    scopeSelect?.addEventListener('change', () => syncCouponTargets(true));
+    syncCouponValue();
+    syncCouponTargets();
+}
