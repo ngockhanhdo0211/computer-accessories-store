@@ -24,6 +24,9 @@ final class UiFoundationTest extends TestCase
 
         $this->assertStringContainsString('navigation: fixed workspace side rail + compact contextual topbar', $css);
         $this->assertStringContainsString('.workspace-menu-toggle { display: none; min-height: 2.75rem; flex: none;', $css);
-        $this->assertStringContainsString('.workspace-store-link { display: none; }', $css);
+        $this->assertStringContainsString('.workspace-breadcrumbs { display: flex;', $css);
+        $this->assertStringContainsString('.workspace-main .breadcrumbs { display: none; }', $css);
+        $this->assertStringContainsString('.workspace-breadcrumbs__root, .workspace-breadcrumbs__root-separator { display: none; }', $css);
+        $this->assertStringNotContainsString('content: "Hiện tại"', $css);
     }
 }

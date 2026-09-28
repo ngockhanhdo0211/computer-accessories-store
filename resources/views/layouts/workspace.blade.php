@@ -26,11 +26,11 @@
 
             <footer class="workspace-footer">
                 <span>Trạm Phụ Kiện</span>
-                <span>Không gian vận hành nội bộ</span>
+                <span>{{ auth()->user()->role->label() }} · Không gian vận hành</span>
             </footer>
         </div>
 
-        <button class="workspace-overlay" type="button" aria-label="Đóng menu quản trị" data-workspace-overlay hidden></button>
+        <button class="workspace-overlay" type="button" aria-label="Đóng menu điều hướng" data-workspace-overlay hidden></button>
     </div>
 </body>
 </html>

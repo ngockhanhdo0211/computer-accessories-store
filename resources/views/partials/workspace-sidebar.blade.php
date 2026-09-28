@@ -1,4 +1,4 @@
-<aside id="workspace-sidebar" class="workspace-sidebar" aria-label="Điều hướng quản trị" data-workspace-sidebar>
+<aside id="workspace-sidebar" class="workspace-sidebar" aria-label="Điều hướng không gian vận hành" data-workspace-sidebar>
     <div class="workspace-sidebar__brand-row">
         <a class="workspace-brand" href="{{ route(auth()->user()->role->dashboardRouteName()) }}" aria-label="Trạm Phụ Kiện, dashboard">
             <span class="brand-mark" aria-hidden="true">TP</span>
@@ -7,12 +7,12 @@
                 <small>Workspace</small>
             </span>
         </a>
-        <button class="workspace-sidebar__close" type="button" aria-label="Đóng menu quản trị" data-workspace-close>
+        <button class="workspace-sidebar__close" type="button" aria-label="Đóng menu điều hướng" data-workspace-close>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
     </div>
 
-    <nav class="workspace-nav" aria-label="Điều hướng quản trị">
+    <nav class="workspace-nav" aria-label="Điều hướng chính">
         <div class="workspace-nav__group">
             <p class="workspace-nav__label">Tổng quan</p>
             <a href="{{ route(auth()->user()->role->dashboardRouteName()) }}" @if(request()->routeIs('admin.dashboard', 'employee.dashboard')) aria-current="page" @endif>

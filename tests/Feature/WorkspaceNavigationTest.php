@@ -49,7 +49,7 @@ class WorkspaceNavigationTest extends TestCase
         foreach ($urls as $url) {
             $this->get($url)->assertOk()
                 ->assertSee('data-workspace-shell', false)
-                ->assertSee('aria-label="Điều hướng quản trị"', false)
+                ->assertSee('aria-label="Điều hướng không gian vận hành"', false)
                 ->assertDontSee('class="site-header"', false)
                 ->assertDontSee('class="site-footer"', false);
         }
@@ -84,7 +84,7 @@ class WorkspaceNavigationTest extends TestCase
         $this->actingAs($customer)->get(route('customer.dashboard'))->assertOk()
             ->assertSee('class="site-header"', false)
             ->assertDontSee('data-workspace-shell', false)
-            ->assertDontSee('aria-label="Điều hướng quản trị"', false);
+            ->assertDontSee('aria-label="Điều hướng không gian vận hành"', false);
 
         $admin = User::factory()->admin()->create();
         $this->actingAs($admin)->get(route('home'))->assertOk()
@@ -109,7 +109,7 @@ class WorkspaceNavigationTest extends TestCase
             ->assertSee('method="POST" action="'.route('logout').'"', false)
             ->assertSee('name="_token"', false)
             ->assertDontSee('href="'.route('logout').'"', false)
-            ->assertSee('aria-label="Mở menu quản trị"', false)
+            ->assertSee('aria-label="Mở menu điều hướng"', false)
             ->assertSee('aria-expanded="false"', false)
             ->assertSee('aria-controls="workspace-sidebar"', false)
             ->assertSee('data-workspace-overlay', false)
@@ -120,6 +120,37 @@ class WorkspaceNavigationTest extends TestCase
             ->assertDontSee('/admin/reviews', false)
             ->assertDontSee('/admin/payments', false)
             ->assertDontSee('/admin/refunds', false);
+    }
+
+    public function test_workspace_topbar_provides_role_aware_breadcrumbs_without_repeating_store_navigation(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $category = Category::factory()->create();
+
+        $adminResponse = $this->actingAs($admin)
+            ->get(route('admin.categories.edit', $category))
+            ->assertOk()
+            ->assertSee('class="workspace-breadcrumbs"', false)
+            ->assertSee('aria-label="Đường dẫn"', false)
+            ->assertSee('href="'.route('admin.dashboard').'"', false)
+            ->assertSee('href="'.route('admin.categories.index').'"', false)
+            ->assertSee('<span class="workspace-breadcrumbs__current" aria-current="page">Sửa danh mục</span>', false);
+
+        $this->assertSame(1, substr_count($adminResponse->getContent(), 'href="'.route('home').'"'));
+
+        $employee = User::factory()->employee()->create();
+        $product = Product::factory()
+            ->for(Category::factory())
+            ->for(Brand::factory())
+            ->create();
+
+        $this->actingAs($employee)
+            ->get(route('inventory.history', $product))
+            ->assertOk()
+            ->assertSee('href="'.route('employee.dashboard').'"', false)
+            ->assertSee('href="'.route('inventory.index').'"', false)
+            ->assertSee('<span class="workspace-breadcrumbs__current" aria-current="page">Lịch sử tồn kho</span>', false)
+            ->assertDontSee('href="'.route('admin.dashboard').'"', false);
     }
 
     public function test_active_state_covers_index_create_edit_and_operations_route_families(): void
@@ -166,6 +197,8 @@ class WorkspaceNavigationTest extends TestCase
 
         $this->assertStringContainsString('[data-workspace-shell]', $javascript);
         $this->assertStringContainsString('[data-nav-toggle]', $javascript);
+        $this->assertStringContainsString('workspace-motion-ready', $javascript);
+        $this->assertStringContainsString("'Đóng menu điều hướng' : 'Mở menu điều hướng'", $javascript);
         $this->assertStringContainsString("event.key === 'Escape'", $javascript);
         $this->assertStringContainsString("event.key === 'Tab'", $javascript);
         $this->assertStringContainsString('workspaceSidebar.inert', $javascript);

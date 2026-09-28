@@ -128,6 +128,7 @@ const workspaceShell = document.querySelector('[data-workspace-shell]');
 
 if (workspaceShell) {
     document.documentElement.classList.add('workspace-enhanced');
+    window.requestAnimationFrame(() => document.documentElement.classList.add('workspace-motion-ready'));
 
     const workspaceSidebar = workspaceShell.querySelector('[data-workspace-sidebar]');
     const workspaceToggle = workspaceShell.querySelector('[data-workspace-toggle]');
@@ -141,7 +142,7 @@ if (workspaceShell) {
 
         workspaceSidebar.dataset.open = String(drawerOpen);
         workspaceToggle.setAttribute('aria-expanded', String(drawerOpen));
-        workspaceToggle.setAttribute('aria-label', drawerOpen ? 'Đóng menu quản trị' : 'Mở menu quản trị');
+        workspaceToggle.setAttribute('aria-label', drawerOpen ? 'Đóng menu điều hướng' : 'Mở menu điều hướng');
         workspaceOverlay.hidden = !drawerOpen;
         workspaceSidebar.inert = !workspaceDesktop.matches && !drawerOpen;
         document.body.classList.toggle('workspace-drawer-open', drawerOpen);
