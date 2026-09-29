@@ -103,7 +103,8 @@ class CheckoutQuotePricingTest extends TestCase
         $this->assertSame(2, $item->fresh()->quantity);
         $this->assertSame($beforeProduct, $product->fresh()->only(array_keys($beforeProduct)));
         $this->assertSame(0, InventoryTransaction::query()->count());
-        $this->assertFalse(Schema::hasTable('orders'));
+        $this->assertTrue(Schema::hasTable('orders'));
+        $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('stock_reservations', 0);
     }
 

@@ -178,10 +178,11 @@ class PaymentAttemptDatabaseTest extends TestCase
         $this->assertDatabaseCount('stock_reservations', 0);
     }
 
-    public function test_coupon_usage_order_and_consume_foundations_remain_absent(): void
+    public function test_order_persistence_exists_while_coupon_usage_and_consume_foundations_remain_absent(): void
     {
         $this->assertFalse(Schema::hasTable('coupon_usages'));
-        $this->assertFalse(Schema::hasTable('orders'));
+        $this->assertTrue(Schema::hasTable('orders'));
+        $this->assertDatabaseCount('orders', 0);
         $this->assertFalse(class_exists(ConsumeStockReservations::class));
     }
 }

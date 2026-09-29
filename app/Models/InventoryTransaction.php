@@ -43,4 +43,9 @@ class InventoryTransaction extends Model
     {
         return $this->belongsTo(InventoryAdjustmentRequest::class, 'adjustment_request_id');
     }
+
+    public function orderItem(): BelongsTo
+    {
+        return $this->belongsTo(OrderItem::class);
+    }
 }

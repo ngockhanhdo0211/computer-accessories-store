@@ -93,7 +93,8 @@ class PaymentAttemptFoundationTest extends TestCase
         $this->assertSame($before[1], $second->fresh()->only(array_keys($before[1])));
         $this->assertDatabaseCount('inventory_transactions', 0);
         $this->assertDatabaseCount('cart_items', 2);
-        $this->assertFalse(Schema::hasTable('orders'));
+        $this->assertTrue(Schema::hasTable('orders'));
+        $this->assertDatabaseCount('orders', 0);
         $this->assertFalse(Schema::hasTable('coupon_usages'));
     }
 

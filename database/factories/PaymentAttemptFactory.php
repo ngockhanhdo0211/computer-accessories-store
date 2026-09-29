@@ -16,13 +16,13 @@ class PaymentAttemptFactory extends Factory
 
     public function definition(): array
     {
+        $shippingRate = ShippingRate::query()->orderBy('id')->firstOrFail();
         $amount = fake()->numberBetween(100_000, 5_000_000);
-        $shippingFee = 30_000;
+        $shippingFee = $shippingRate->fee_vnd;
 
         return [
             'user_id' => User::factory(),
-            'shipping_rate_id' => fn () => ShippingRate::query()->value('id')
-                ?? throw new \RuntimeException('Shipping rates must exist before creating a Payment Attempt fixture.'),
+            'shipping_rate_id' => $shippingRate->id,
             'request_key' => (string) Str::uuid(),
             'gateway_reference' => 'PA-'.Str::uuid(),
             'gateway_transaction_id' => null,
@@ -50,8 +50,15 @@ class PaymentAttemptFactory extends Factory
                 'item_discount_vnd' => 0,
                 'shipping_fee_vnd' => $shippingFee,
                 'shipping_discount_vnd' => 0,
+                'shipping_fee_after_discount_vnd' => $shippingFee,
                 'total_discount_vnd' => 0,
                 'total_vnd' => $amount,
+                'shipping' => [
+                    'shipping_rate_id' => $shippingRate->id,
+                    'region_key' => $shippingRate->region_key->value,
+                    'region_label' => $shippingRate->region_key->label(),
+                    'shipping_fee_vnd' => $shippingFee,
+                ],
             ],
             'shipping_fee_vnd' => $shippingFee,
             'coupon_id' => null,

@@ -156,4 +156,9 @@ class Product extends Model
     {
         return $this->hasMany(StockReservation::class);
     }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
 }

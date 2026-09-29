@@ -71,6 +71,11 @@ class Coupon extends Model
         return $this->hasMany(PaymentAttempt::class);
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     /** @return array<int, int> */
     public function targetIds(): array
     {
