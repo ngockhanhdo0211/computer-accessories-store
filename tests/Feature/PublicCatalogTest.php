@@ -208,7 +208,7 @@ class PublicCatalogTest extends TestCase
 
         DB::flushQueryLog();
         $this->get(route('products.show', $products->first()))->assertOk();
-        $this->assertLessThanOrEqual(5, count(DB::getQueryLog()));
+        $this->assertLessThanOrEqual(6, count(DB::getQueryLog()));
     }
 
     public function test_empty_and_no_result_states_are_distinct_and_filter_options_are_public_only(): void

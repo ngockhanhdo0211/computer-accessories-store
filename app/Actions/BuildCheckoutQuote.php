@@ -34,6 +34,7 @@ class BuildCheckoutQuote
         CheckoutRecipient $recipient,
         ?string $couponCode = null,
         ?CarbonInterface $at = null,
+        bool $lockReservations = false,
     ): CheckoutQuote {
         $this->assertActiveCustomer($user);
         $quotedAt = CarbonImmutable::instance($at ?? now());
@@ -52,7 +53,12 @@ class BuildCheckoutQuote
             ]);
         }
 
-        $available = $this->availability->forProducts($cartItems->pluck('product'));
+        $available = $this->availability->forProducts(
+            $cartItems->pluck('product'),
+            null,
+            $quotedAt,
+            $lockReservations,
+        );
         $lines = [];
         $couponLines = [];
         $cartSubtotal = 0;

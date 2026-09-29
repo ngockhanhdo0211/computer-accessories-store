@@ -104,7 +104,7 @@ class CheckoutQuotePricingTest extends TestCase
         $this->assertSame($beforeProduct, $product->fresh()->only(array_keys($beforeProduct)));
         $this->assertSame(0, InventoryTransaction::query()->count());
         $this->assertFalse(Schema::hasTable('orders'));
-        $this->assertFalse(Schema::hasTable('stock_reservations'));
+        $this->assertDatabaseCount('stock_reservations', 0);
     }
 
     public function test_quote_rejects_cart_and_grand_total_overflow(): void

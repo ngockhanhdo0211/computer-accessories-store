@@ -87,4 +87,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(ShippingRate::class, 'updated_by');
     }
+
+    public function paymentAttempts(): HasMany
+    {
+        return $this->hasMany(PaymentAttempt::class);
+    }
 }

@@ -7,6 +7,7 @@ use Database\Factories\ShippingRateFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ShippingRate extends Model
 {
@@ -36,5 +37,10 @@ class ShippingRate extends Model
     public function getRouteKey(): mixed
     {
         return $this->getRawOriginal('region_key');
+    }
+
+    public function paymentAttempts(): HasMany
+    {
+        return $this->hasMany(PaymentAttempt::class);
     }
 }

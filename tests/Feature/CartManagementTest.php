@@ -14,7 +14,6 @@ use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -135,7 +134,7 @@ class CartManagementTest extends TestCase
         ]);
         $this->assertDatabaseMissing('cart_items', ['user_id' => $other->id]);
         $this->assertSame(350000, $product->fresh()->price_vnd);
-        $this->assertFalse(Schema::hasTable('stock_reservations'));
+        $this->assertDatabaseCount('stock_reservations', 0);
     }
 
     public function test_update_and_remove_require_ownership_and_positive_available_quantity(): void

@@ -1,6 +1,6 @@
 # 07 — Thiết kế cơ sở dữ liệu triển khai
 
-Tài liệu này là thiết kế cho MariaDB/MySQL. Các migration `users`, Category, Brand, Product/Image, Inventory/Audit và `cart_items` đã triển khai; các bảng nghiệp vụ còn lại vẫn là kế hoạch. Baseline Laravel có `users`, `password_reset_tokens`, `sessions`, cache và queue mặc định. Đề xuất **24 bảng nghiệp vụ mới và mở rộng `users`**; không tạo bảng `payments` riêng: `payment_attempts` là hồ sơ giao dịch VNPay, còn `orders.payment_status` là trạng thái thanh toán của đơn (COD hoặc VNPay). Kho phiên bản đầu chỉ có một địa điểm nên không cần bảng `warehouses`.
+Tài liệu này là thiết kế cho MariaDB/MySQL. Các migration `users`, Category, Brand, Product/Image, Inventory/Audit, `cart_items`, `payment_attempts` và `stock_reservations` đã triển khai; các bảng nghiệp vụ còn lại vẫn là kế hoạch. Baseline Laravel có `users`, `password_reset_tokens`, `sessions`, cache và queue mặc định. Đề xuất **24 bảng nghiệp vụ mới và mở rộng `users`**; không tạo bảng `payments` riêng: `payment_attempts` là hồ sơ giao dịch VNPay, còn `orders.payment_status` là trạng thái thanh toán của đơn (COD hoặc VNPay). Kho phiên bản đầu chỉ có một địa điểm nên không cần bảng `warehouses`.
 
 ## Quy ước và nguyên tắc
 
@@ -207,16 +207,16 @@ Các CHECK đã triển khai: `products_price_vnd_check`, `products_sale_price_v
 
 Ảnh dùng disk `public`, thư mục `products/{id}`, tên UUID do server tạo; chỉ nhận nội dung có MIME thực tế JPEG, PNG hoặc WebP, tối đa 5 MB mỗi ảnh và 8 ảnh mỗi product. Path không mass assign từ request. Giới hạn 8 ảnh và invariant một ảnh đại diện được bảo vệ bằng transaction cùng khóa hàng Product; không dùng `UNIQUE(product_id,is_primary)` vì constraint đó cũng chỉ cho phép một hàng `false`. File mới được dọn nếu upload giữa chừng hoặc ghi metadata thất bại. Xóa ảnh/Product đăng ký cleanup vật lý bằng `afterCommit`, vì vậy rollback transaction ngoài không làm mất file; cleanup chỉ chấp nhận path một cấp trong `products/{id}`. Xóa Product bị FK nghiệp vụ từ chối thì transaction phục hồi metadata và không xóa file. File đã mất được xem là cleanup hoàn tất; lỗi storage sau commit được ghi log để xử lý lại.
 
-Projection `sellable_quantity`, `damaged_quantity`, `sold_quantity` và `low_stock_threshold` không xuất hiện trong form Product; Catalog tạo mặc định 0/0/0/5. Inventory Foundation đã triển khai writer riêng cho `import`, `damaged` và `manual_adjustment`; `sale`, `cancel_restore` và stock reservation chưa được kích hoạt. Giá hiện hành được tính từ `sale_price_vnd` khi có giá trị hợp lệ, ngược lại dùng `price_vnd`; CHECK giữ invariant `0 < sale_price_vnd < price_vnd`. Search tên/SKU dùng binding và escape `%`, `_`, `!` để chúng mang nghĩa ký tự literal.
+Projection `sellable_quantity`, `damaged_quantity`, `sold_quantity` và `low_stock_threshold` không xuất hiện trong form Product; Catalog tạo mặc định 0/0/0/5. Inventory Foundation đã triển khai writer riêng cho `import`, `damaged` và `manual_adjustment`. Stock Reservation Foundation đã kích hoạt giữ/giải phóng availability nhưng không sửa projection và không tạo ledger; `sale`, `cancel_restore` và consume reservation chưa được kích hoạt. Giá hiện hành được tính từ `sale_price_vnd` khi có giá trị hợp lệ, ngược lại dùng `price_vnd`; CHECK giữ invariant `0 < sale_price_vnd < price_vnd`. Search tên/SKU dùng binding và escape `%`, `_`, `!` để chúng mang nghĩa ký tự literal.
 ## Cart Foundation đã triển khai
 
 Migration create_cart_items_table chạy trên MariaDB 10.4.32 và SQLite test. MariaDB dùng named CHECK cart_items_quantity_check; SQLite dùng hai trigger có tên ổn định cho INSERT/UPDATE vì không hỗ trợ ALTER TABLE ADD/DROP CHECK tương đương. Partial-state guard dừng khi bảng đã tồn tại và không tự DROP dữ liệu. down() chỉ gỡ cart_items; chỉ dùng riêng migration này sau khi xác nhận an toàn.
 
 Application khóa Product trước Cart item trong transaction, kiểm tra lại Product/Category/Brand public và số lượng trước khi ghi. UQ(user_id,product_id) là lớp bảo vệ cuối chống dòng trùng; thêm lại tăng quantity trên cùng dòng. Giá và subtotal VND là integer tính từ giá Product hiện tại; Cart không nhận user/price/subtotal/stock từ client, không đổi projection kho và không tạo inventory transaction.
 
-Công thức availability giữ nguyên: max(0, sellable_quantity - active_reserved_quantity). Trong slice Cart, `active_reserved_quantity = 0` vì `stock_reservations` chưa được phép tạo trước dependency `payment_attempts`; service nhận tổng reservation theo batch để giữ contract tính toán, còn aggregate theo thời gian sẽ được nối khi schema reservation hợp lệ. Storefront hiển thị tồn khả dụng theo contract này; Inventory tiếp tục hiển thị physical projection.
+Công thức availability giữ nguyên: `max(0, sellable_quantity - active_reserved_quantity)`. `active_reserved_quantity` hiện được aggregate theo Product từ các reservation có `released_at IS NULL`, `consumed_at IS NULL` và `expires_at > thời điểm UTC hiện tại`; Cart/Checkout dùng cùng service, còn Inventory tiếp tục hiển thị physical projection.
 
-stock_reservations vẫn thuộc bước 4 của thứ tự migration: phải tạo payment_attempts trước vì payment_attempt_id là FK bắt buộc và UQ(payment_attempt_id,product_id) là idempotency scope. Slice Checkout/VNPay sẽ tạo reservation 15 phút, aggregate active theo UTC, reserve/release/consume và test concurrency. Cart Foundation không tạo enum, bảng hay reference thay thế cho checkout.
+`stock_reservations` được tạo sau `payment_attempts` vì `payment_attempt_id` là FK bắt buộc; `UQ(payment_attempt_id,product_id)` là lớp bảo vệ cuối cho mỗi dòng hàng của attempt. Foundation hiện chỉ create/release/expire; consume chờ transaction tạo Order.
 
 ## Checkout Quote Foundation đã triển khai
 
@@ -224,7 +224,17 @@ Customer active có hai route `GET /checkout` và `POST /checkout/quote`. Đây 
 
 Kết quả là các readonly value object trong phạm vi request gồm recipient, line items, shipping, coupon và tổng tiền; các invariant giữ `grand_total = cart_subtotal - product_discount + shipping_fee - shipping_discount`, discount không âm và không vượt phần tương ứng. Quote không được lưu vào session hay database và thay đổi cấu hình sau đó không làm đổi object đã trả trong request hiện tại.
 
-Foundation này không tạo migration/model cho Order, Payment Attempt, Stock Reservation hay Coupon Usage; không đặt hàng, không giữ/trừ kho, không giữ/tiêu lượt mã, không xóa giỏ và không ghi inventory transaction. `max_uses` và `max_uses_per_user` chưa thể được xác nhận khi chưa có usage ledger, nên quote chỉ dùng các quy tắc tĩnh của evaluator và phải được tính lại trong transaction ở slice đặt hàng/thanh toán sau.
+Hai route Quote vẫn chỉ đọc và không trực tiếp tạo Order, Payment Attempt, Stock Reservation hay Coupon Usage; không đặt hàng, giữ/trừ kho, giữ/tiêu lượt mã, xóa giỏ hoặc ghi inventory transaction. `max_uses` và `max_uses_per_user` chưa thể được xác nhận khi chưa có usage ledger, nên quote chỉ dùng các quy tắc tĩnh của evaluator và phải được tính lại trong transaction ở slice đặt hàng/thanh toán sau.
+
+## Payment Attempt + Stock Reservation Foundation đã triển khai
+
+`payment_attempts` và `stock_reservations` đã được tạo theo schema ở trên. Application action chỉ nhận Customer active, UUID request key, người nhận đã chuẩn hóa và mã Coupon tùy chọn; server luôn tính lại Quote trong transaction. Slice hiện chỉ chấp nhận attempt không Coupon. Nếu có Coupon, action trả domain validation error rõ ràng, không âm thầm bỏ mã và không tuyên bố giữ usage capacity.
+
+Attempt lưu snapshot scalar/JSON độc lập cho recipient, Cart lines, shipping và pricing; tiền là integer VND. Cùng `(user_id,request_key)` và cùng payload trả lại chính attempt cũ; key đã dùng với recipient hoặc Cart khác bị từ chối. Không nhận amount, status, snapshot, Customer ID hay gateway result từ client. Payment Attempt chưa phải Order và không xóa Cart.
+
+Khi tạo mới, application lấy tập Product của Cart trước transaction, sau đó khóa Product theo ID tăng dần, khóa Cart rows, kiểm tra lại tập Product và dùng locking read cho reservation active trước khi ghi attempt cùng mọi reservation trong một transaction. Hỏng một dòng làm rollback toàn bộ. Reservation hết hạn đúng 15 phút, chỉ active khi cả hai terminal timestamp NULL và `expires_at > now UTC`. Release idempotent chỉ điền `released_at`; command `stock-reservations:release-expired` xử lý theo chunk và chạy lại an toàn. Create/release/expire không sửa `sellable_quantity`, `damaged_quantity`, `sold_quantity`, không tạo InventoryTransaction, Coupon Usage, Order hay Refund.
+
+Chưa có consume action, VNPay initiation/callback, public route hoặc UI cho Payment Attempt. Coupon Usage được hoãn có chủ đích đến sau Order Persistence để migration có đầy đủ FK tới `orders` và `payment_attempts`. Thứ tự tiếp theo là: (1) Order Persistence Foundation; (2) Coupon Usage với đầy đủ FK; (3) VNPay initiation/callback và transaction tạo Order; (4) COD Order creation.
 ## CHECK domain của `users` đã triển khai
 
 | Constraint | Biểu thức |
@@ -249,12 +259,14 @@ SQLite 3.39.2 không hỗ trợ thêm/gỡ table CHECK trực tiếp trên bản
 1. Mở rộng `users` bằng migration mới cho hồ sơ (phone/gender/dob/address), role/status/current_tier, membership_spending, last_login_at và must_change_password; giữ `password_reset_tokens`, `sessions` mặc định. `audit_logs` đã được tạo trong Inventory Foundation; `membership_histories` thuộc slice thành viên sau.
 2. Tạo `categories` (self FK sau khi có bảng), `brands`, `shipping_rates`, `coupons`.
 3. **Đã tạo `products`, `product_images`, `inventory_adjustment_requests` và `cart_items`.** Ba bảng target coupon thuộc các slice sau.
-4. Tạo `payment_attempts` (sau user/rate/coupon), rồi `stock_reservations`.
-5. Tạo `orders`, `order_items`, `order_status_histories`, `coupon_usages`.
+4. **Đã tạo `payment_attempts` (sau user/rate/coupon), rồi `stock_reservations`.** Application Foundation hiện chỉ tạo attempt không Coupon và create/release/expire reservation.
+5. Tạo `orders`, `order_items`, `order_status_histories`; sau khi Order tồn tại mới tạo `coupon_usages` với đầy đủ FK tới orders/payment_attempts.
 6. Tạo `return_inspections`, `refunds`, `reviews`, `review_replies`.
 7. **Đã tạo nền tảng** `audit_logs`, `inventory_adjustment_requests` và `inventory_transactions` sau Product. Vì Order/Return chưa tồn tại, ledger hiện chỉ có FK tới Product, actor và adjustment request; migration của `order_items`/`return_inspections` sẽ bổ sung hai nguồn nullable tương ứng trước khi kích hoạt `sale`/`cancel_restore`. Migration Inventory không backfill hay đổi projection Product hiện hữu.
 
 Các bảng chưa cần cho slice đầu không tạo sớm; thứ tự trên là đồ thị phụ thuộc, không phải yêu cầu chạy tất cả một lần.
+
+Phần “Tạo stock reservation VNPay” trong bảng transaction dưới đây mô tả đích cuối sau khi Coupon Usage và VNPay initiation tồn tại. Foundation hiện tại dừng trước Coupon/redirect: attempt có Coupon bị từ chối, không tạo usage; chưa gọi cổng thanh toán, consume reservation hay tạo Order.
 
 ## Transaction, row locking và tính toán
 

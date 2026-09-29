@@ -9,6 +9,7 @@ use Database\Factories\CouponFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Coupon extends Model
 {
@@ -63,6 +64,11 @@ class Coupon extends Model
     public function brands(): BelongsToMany
     {
         return $this->belongsToMany(Brand::class, 'coupon_brands');
+    }
+
+    public function paymentAttempts(): HasMany
+    {
+        return $this->hasMany(PaymentAttempt::class);
     }
 
     /** @return array<int, int> */
