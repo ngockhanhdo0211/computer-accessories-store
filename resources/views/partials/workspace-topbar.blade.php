@@ -11,7 +11,15 @@
             <a class="workspace-breadcrumbs__root" href="{{ route(auth()->user()->role->dashboardRouteName()) }}">Dashboard</a>
             <span class="workspace-breadcrumbs__separator workspace-breadcrumbs__root-separator" aria-hidden="true">/</span>
 
-            @if (request()->routeIs('admin.categories.*'))
+            @if (request()->routeIs('admin.orders.*', 'employee.orders.*'))
+                @if (request()->routeIs('admin.orders.index', 'employee.orders.index'))
+                    <span class="workspace-breadcrumbs__current" aria-current="page">Đơn hàng</span>
+                @else
+                    <a class="workspace-breadcrumbs__section" href="{{ route(auth()->user()->isAdmin() ? 'admin.orders.index' : 'employee.orders.index') }}">Đơn hàng</a>
+                    <span class="workspace-breadcrumbs__separator" aria-hidden="true">/</span>
+                    <span class="workspace-breadcrumbs__current" aria-current="page">@yield('title')</span>
+                @endif
+            @elseif (request()->routeIs('admin.categories.*'))
                 @if (request()->routeIs('admin.categories.index'))
                     <span class="workspace-breadcrumbs__current" aria-current="page">Danh mục</span>
                 @else

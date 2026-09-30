@@ -25,6 +25,7 @@
                     <a class="button" href="{{ route('register') }}" @if(request()->routeIs('register')) aria-current="page" @endif>Đăng ký</a>
                 @else
                     @if (auth()->user()->isCustomer())
+                        <a href="{{ route('orders.index') }}" @if(request()->routeIs('orders.*')) aria-current="page" @endif>Đơn hàng của tôi</a>
                         <a class="cart-nav-link" href="{{ route('cart.index') }}" @if(request()->routeIs('cart.*')) aria-current="page" @endif>
                             Giỏ hàng <span class="cart-count" aria-label="{{ $cartItemCount }} dòng sản phẩm">{{ $cartItemCount }}</span>
                         </a>
@@ -49,6 +50,7 @@
                 <a href="{{ route('register') }}" @if(request()->routeIs('register')) aria-current="page" @endif>Đăng ký</a>
             @else
                 @if (auth()->user()->isCustomer())
+                    <a href="{{ route('orders.index') }}" @if(request()->routeIs('orders.*')) aria-current="page" @endif>Đơn hàng của tôi</a>
                     <a href="{{ route('cart.index') }}" @if(request()->routeIs('cart.*')) aria-current="page" @endif>Giỏ hàng ({{ $cartItemCount }})</a>
                 @endif
                 <span class="nav-user">{{ auth()->user()->name }}</span>

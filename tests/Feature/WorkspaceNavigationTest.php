@@ -27,6 +27,7 @@ class WorkspaceNavigationTest extends TestCase
 
         $urls = [
             route('admin.dashboard'),
+            route('admin.orders.index'),
             route('admin.categories.index'),
             route('admin.categories.create'),
             route('admin.categories.edit', $category),
@@ -64,6 +65,7 @@ class WorkspaceNavigationTest extends TestCase
             ->assertSee('&lt;b&gt;Nhân viên tên dài&lt;/b&gt;', false)
             ->assertSee('href="'.route('employee.dashboard').'"', false)
             ->assertSee('href="'.route('inventory.index').'"', false)
+            ->assertSee('href="'.route('employee.orders.index').'"', false)
             ->assertSee('href="'.route('home').'"', false)
             ->assertDontSee('href="'.route('admin.categories.index').'"', false)
             ->assertDontSee('href="'.route('admin.brands.index').'"', false)
@@ -115,7 +117,7 @@ class WorkspaceNavigationTest extends TestCase
             ->assertSee('data-workspace-overlay', false)
             ->assertSee('href="#workspace-main"', false)
             ->assertSee('href="'.route('admin.coupons.index').'"', false)
-            ->assertDontSee('/admin/orders', false)
+            ->assertSee('href="'.route('admin.orders.index').'"', false)
             ->assertDontSee('/admin/customers', false)
             ->assertDontSee('/admin/reviews', false)
             ->assertDontSee('/admin/payments', false)
@@ -165,6 +167,7 @@ class WorkspaceNavigationTest extends TestCase
 
         $cases = [
             [route('admin.dashboard'), route('admin.dashboard')],
+            [route('admin.orders.index'), route('admin.orders.index')],
             [route('admin.categories.index'), route('admin.categories.index')],
             [route('admin.categories.create'), route('admin.categories.index')],
             [route('admin.categories.edit', $category), route('admin.categories.index')],
@@ -218,6 +221,8 @@ class WorkspaceNavigationTest extends TestCase
 
         foreach ([
             'admin.dashboard' => ['web', 'auth', 'active', 'role:admin'],
+            'admin.orders.index' => ['web', 'auth', 'active', 'role:admin'],
+            'employee.orders.index' => ['web', 'auth', 'active', 'role:employee'],
             'admin.categories.index' => ['web', 'auth', 'active', 'role:admin'],
             'admin.brands.index' => ['web', 'auth', 'active', 'role:admin'],
             'admin.products.index' => ['web', 'auth', 'active', 'role:admin'],

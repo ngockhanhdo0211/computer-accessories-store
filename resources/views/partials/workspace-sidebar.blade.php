@@ -38,6 +38,11 @@
 
         <div class="workspace-nav__group">
             <p class="workspace-nav__label">Vận hành</p>
+            @if (auth()->user()->isAdmin())
+                <a href="{{ route('admin.orders.index') }}" @if(request()->routeIs('admin.orders.*')) aria-current="page" @endif>Đơn hàng</a>
+            @else
+                <a href="{{ route('employee.orders.index') }}" @if(request()->routeIs('employee.orders.*')) aria-current="page" @endif>Đơn hàng</a>
+            @endif
             <a href="{{ route('inventory.index') }}" @if(request()->routeIs('inventory.*')) aria-current="page" @endif>Tồn kho</a>
             @if (auth()->user()->isAdmin())
                 <a href="{{ route('admin.shipping-rates.index') }}" @if(request()->routeIs('admin.shipping-rates.*')) aria-current="page" @endif>Phí vận chuyển</a>

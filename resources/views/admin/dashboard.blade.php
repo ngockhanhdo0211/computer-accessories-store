@@ -87,7 +87,7 @@
             <h2 id="roadmap-title">Các phần tiếp theo</h2>
             <p>Những module này chưa có dữ liệu để thống kê.</p>
             <ul>
-                @foreach (['Giỏ hàng', 'Đơn hàng', 'Đánh giá', 'Mã giảm giá'] as $module)
+                @foreach (['Xử lý vòng đời đơn', 'Thanh toán VNPay', 'Hoàn tiền', 'Đánh giá'] as $module)
                     <li><span>{{ $module }}</span><span>Chưa triển khai</span></li>
                 @endforeach
             </ul>

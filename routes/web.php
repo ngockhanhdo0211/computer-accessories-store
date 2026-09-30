@@ -13,8 +13,9 @@ use App\Http\Controllers\Auth\RegisteredCustomerController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\OrderReceiptController;
+use App\Http\Controllers\ManagedOrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -47,9 +48,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/cod', [CheckoutController::class, 'storeCod'])->name('cod.store');
     });
 
-    Route::get('/orders/{orderCode}', OrderReceiptController::class)
-        ->middleware('role:customer')
-        ->name('orders.show');
+    Route::middleware('role:customer')->prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [CustomerOrderController::class, 'index'])->name('index');
+        Route::get('/{orderCode}', [CustomerOrderController::class, 'show'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('show');
+    });
 
     Route::get('/dashboard', function () {
         $role = UserRole::tryFrom((string) request()->user()->getRawOriginal('role'));
@@ -62,6 +66,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->middleware('role:customer')->name('customer.dashboard');
     Route::get('/employee/dashboard', fn () => view('dashboard'))
         ->middleware('role:employee')->name('employee.dashboard');
+    Route::middleware('role:employee')->prefix('employee')->name('employee.')->group(function () {
+        Route::get('/orders', [ManagedOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{orderCode}', [ManagedOrderController::class, 'show'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('orders.show');
+    });
     Route::get('/admin/dashboard', AdminDashboardController::class)
         ->middleware('role:admin')->name('admin.dashboard');
 
@@ -85,6 +95,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/orders', [ManagedOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{orderCode}', [ManagedOrderController::class, 'show'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('orders.show');
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('brands', BrandController::class)->except('show');
         Route::resource('coupons', CouponController::class)->except('show');

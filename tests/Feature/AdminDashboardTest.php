@@ -158,8 +158,8 @@ class AdminDashboardTest extends TestCase
             ->assertSee('href="'.route('admin.brands.index').'"', false)
             ->assertSee('href="'.route('home').'"', false)
             ->assertSee('Chưa triển khai')
-            ->assertSee('Giỏ hàng')
-            ->assertDontSee('href="/admin/orders"', false)
+            ->assertSee('Xử lý vòng đời đơn')
+            ->assertSee('href="'.route('admin.orders.index').'"', false)
             ->assertDontSee('href="/cart"', false)
             ->assertDontSee('Doanh thu')
             ->assertDontSee('Tổng đơn hàng');
