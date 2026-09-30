@@ -21,6 +21,7 @@
                 'ward' => 'ward',
                 'address_line' => 'address_line',
                 'coupon_code' => 'coupon_code',
+                'request_key' => 'checkout-summary-title',
                 'cart' => 'checkout-summary-title',
             ];
         @endphp
@@ -46,13 +47,14 @@
         <section class="checkout-quote-status" aria-labelledby="quote-status-title">
             <p class="section-label">Đã tính lúc {{ $quote->quotedAt->timezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y') }}</p>
             <h2 id="quote-status-title">Bảng tính tạm thời</h2>
-            <p>Đây chưa phải đơn hàng và không giữ tồn kho hoặc lượt dùng mã. Giá, mã giảm giá và tồn khả dụng sẽ được xác minh lại khi chức năng đặt hàng được triển khai.</p>
+            <p>Đây chưa phải đơn hàng và chưa giữ tồn kho hoặc lượt dùng mã. Hệ thống sẽ xác minh lại toàn bộ dữ liệu khi bạn đặt hàng COD.</p>
         </section>
     @endif
 
     <div class="checkout-layout">
         <form class="checkout-form form-panel" method="POST" action="{{ route('checkout.quote') }}" novalidate>
             @csrf
+            @include('checkout._request-key')
             <header class="checkout-section-heading">
                 <p class="section-label">Người nhận</p>
                 <h2>Thông tin giao hàng</h2>
@@ -179,6 +181,7 @@
 
             @if ($quote)
                 <p class="checkout-summary__note">{{ $quote->shipping->regionLabel }} · Phí sau ưu đãi {{ number_format($quote->shippingFeeAfterDiscountVnd, 0, ',', '.') }} ₫.</p>
+                @include('checkout._cod-form')
             @else
                 <p class="checkout-summary__note">Nhập thông tin nhận hàng để server xác định vùng phí và tạo bảng tính.</p>
             @endif

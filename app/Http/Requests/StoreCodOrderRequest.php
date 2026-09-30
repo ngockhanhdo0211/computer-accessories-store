@@ -8,18 +8,11 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class CheckoutQuoteRequest extends FormRequest
+class StoreCodOrderRequest extends FormRequest
 {
     private const ALLOWED_FIELDS = [
-        'request_key',
-        'recipient_name',
-        'recipient_email',
-        'recipient_phone',
-        'province',
-        'district',
-        'ward',
-        'address_line',
-        'coupon_code',
+        'request_key', 'recipient_name', 'recipient_email', 'recipient_phone',
+        'province', 'district', 'ward', 'address_line', 'coupon_code',
     ];
 
     public function authorize(): bool
@@ -31,7 +24,7 @@ class CheckoutQuoteRequest extends FormRequest
     {
         $normalized = $this->only(self::ALLOWED_FIELDS);
 
-        foreach (['recipient_name', 'province', 'district', 'ward', 'address_line'] as $field) {
+        foreach (['request_key', 'recipient_name', 'province', 'district', 'ward', 'address_line'] as $field) {
             if (isset($normalized[$field]) && is_string($normalized[$field])) {
                 $collapsed = preg_replace('/\s+/u', ' ', $normalized[$field]);
                 $normalized[$field] = $collapsed === null ? $normalized[$field] : trim($collapsed);
@@ -41,11 +34,9 @@ class CheckoutQuoteRequest extends FormRequest
         if (isset($normalized['recipient_email']) && is_string($normalized['recipient_email'])) {
             $normalized['recipient_email'] = mb_strtolower(trim($normalized['recipient_email']));
         }
-
         if (isset($normalized['recipient_phone']) && is_string($normalized['recipient_phone'])) {
             $normalized['recipient_phone'] = PhoneNumberNormalizer::normalize($normalized['recipient_phone']);
         }
-
         if (isset($normalized['coupon_code']) && is_string($normalized['coupon_code'])) {
             $normalized['coupon_code'] = mb_strtoupper(trim($normalized['coupon_code']));
         }
@@ -56,16 +47,14 @@ class CheckoutQuoteRequest extends FormRequest
     protected function failedValidation(Validator $validator): never
     {
         throw new HttpResponseException(
-            redirect()->route('checkout.show')
-                ->withErrors($validator)
-                ->withInput($this->only(self::ALLOWED_FIELDS)),
+            redirect()->route('checkout.show')->withErrors($validator)->withInput($this->only(self::ALLOWED_FIELDS)),
         );
     }
 
     public function rules(): array
     {
         return [
-            'request_key' => ['nullable', 'uuid'],
+            'request_key' => ['required', 'uuid'],
             'recipient_name' => ['required', 'string', 'max:255'],
             'recipient_email' => ['required', 'string', 'email:rfc', 'max:255'],
             'recipient_phone' => ['required', 'regex:/^0[35789][0-9]{8}$/'],
@@ -80,7 +69,8 @@ class CheckoutQuoteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'request_key.uuid' => 'Khóa xác nhận checkout không hợp lệ.',
+            'request_key.required' => 'Thiếu khóa chống tạo đơn trùng. Vui lòng tạo lại báo giá.',
+            'request_key.uuid' => 'Khóa chống tạo đơn trùng không hợp lệ.',
             'recipient_name.required' => 'Vui lòng nhập tên người nhận.',
             'recipient_name.string' => 'Tên người nhận phải là chuỗi ký tự.',
             'recipient_name.max' => 'Tên người nhận không được vượt quá 255 ký tự.',
@@ -112,14 +102,14 @@ class CheckoutQuoteRequest extends FormRequest
         $data = $this->validated();
 
         return new CheckoutRecipient(
-            $data['recipient_name'],
-            $data['recipient_email'],
-            $data['recipient_phone'],
-            $data['province'],
-            $data['district'],
-            $data['ward'],
-            $data['address_line'],
+            $data['recipient_name'], $data['recipient_email'], $data['recipient_phone'],
+            $data['province'], $data['district'], $data['ward'], $data['address_line'],
         );
+    }
+
+    public function requestKey(): string
+    {
+        return $this->validated('request_key');
     }
 
     public function couponCode(): ?string
@@ -129,15 +119,8 @@ class CheckoutQuoteRequest extends FormRequest
         return is_string($code) && $code !== '' ? $code : null;
     }
 
-    public function requestKey(): ?string
-    {
-        $key = $this->validated('request_key');
-
-        return is_string($key) && $key !== '' ? $key : null;
-    }
-
     /** @return array<string, mixed> */
-    public function quoteInput(): array
+    public function checkoutInput(): array
     {
         return $this->safe()->only(self::ALLOWED_FIELDS);
     }

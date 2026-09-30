@@ -10,6 +10,17 @@ enum OrderStatus: string
     case Delivered = 'da_giao';
     case Cancelled = 'da_huy';
 
+    public function label(): string
+    {
+        return match ($this) {
+            self::Placed => 'Đã đặt',
+            self::AwaitingHandoff => 'Chờ chuyển phát',
+            self::InTransit => 'Đang trung chuyển',
+            self::Delivered => 'Đã giao',
+            self::Cancelled => 'Đã hủy',
+        };
+    }
+
     public function canTransitionTo(self $next): bool
     {
         return match ($this) {

@@ -1018,7 +1018,7 @@ h1, h2, h3 { min-width: 0; overflow-wrap: anywhere; font-family: var(--font-disp
   .coupon-value-suffix { transition: none; }
 }
 
-/* Checkout Quote Foundation reuses the storefront system; quote is read-only and non-persistent. */
+/* Checkout and COD receipt reuse the storefront system; the quote remains read-only until confirmation. */
 .checkout-page { padding-block: var(--space-10) var(--space-16); }
 .checkout-header { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(18rem, .75fr); gap: var(--space-10); align-items: end; margin-bottom: var(--space-8); padding-bottom: var(--space-6); border-bottom: var(--border-thin) solid var(--color-line); }
 .checkout-header h1 { max-width: 18ch; margin: var(--space-2) 0 0; }
@@ -1051,6 +1051,9 @@ h1, h2, h3 { min-width: 0; overflow-wrap: anywhere; font-family: var(--font-disp
 .checkout-totals__grand { margin-top: var(--space-3); padding-top: var(--space-4) !important; border-top: 2px solid var(--color-ink); }
 .checkout-totals__grand dt, .checkout-totals__grand dd { color: var(--color-ink); font: 800 var(--text-lg)/1.2 var(--font-display); }
 .checkout-summary__note { margin: var(--space-5) 0 0; color: var(--color-ink-muted); font-size: var(--text-sm); }
+.checkout-cod-form { display: grid; gap: var(--space-3); margin-top: var(--space-5); padding-top: var(--space-5); border-top: var(--border-thin) solid var(--color-line); }
+.checkout-cod-form .button { width: 100%; }
+.checkout-cod-form p { margin: 0; color: var(--color-ink-muted); font-size: var(--text-sm); }
 
 @media (max-width: 64rem) {
   .checkout-header, .checkout-layout { grid-template-columns: minmax(0, 1fr); }

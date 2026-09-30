@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Actions\CreateOrder;
+use App\Actions\CreateCodOrder;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -564,14 +564,42 @@ class OrderPersistenceDatabaseTest extends TestCase
         $this->assertTrue(Schema::hasColumn('inventory_transactions', 'order_item_id'));
     }
 
-    public function test_no_order_route_ui_or_order_writer_is_added(): void
+    public function test_cod_fingerprint_migration_guards_partial_state_and_round_trips_with_historical_vnpay_order(): void
+    {
+        $migration = require database_path('migrations/2026_09_30_000000_add_idempotency_fingerprint_to_orders_table.php');
+
+        try {
+            $migration->up();
+            $this->fail('Fingerprint migration accepted an already-applied partial state.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('partial migration state', $exception->getMessage());
+        }
+
+        $attempt = $this->verifiedAttempt();
+        $order = Order::factory()->forVerifiedAttempt($attempt)->create();
+        $migration->down();
+        $this->assertFalse(Schema::hasColumn('orders', 'idempotency_fingerprint'));
+
+        $migration->up();
+        $this->assertTrue(Schema::hasColumn('orders', 'idempotency_fingerprint'));
+        $this->assertNull(DB::table('orders')->where('id', $order->id)->value('idempotency_fingerprint'));
+
+        Order::factory()->create();
+        try {
+            $migration->down();
+            $this->fail('Fingerprint migration removed COD idempotency data.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('while COD Orders exist', $exception->getMessage());
+        }
+        $this->assertTrue(Schema::hasColumn('orders', 'idempotency_fingerprint'));
+    }
+
+    public function test_cod_slice_adds_only_the_scoped_order_writer_and_customer_routes(): void
     {
         $this->assertTrue(Schema::hasTable('coupon_usages'));
-        $this->assertFalse(class_exists(CreateOrder::class));
-        $this->assertFalse(collect(app('router')->getRoutes())->contains(
-            fn ($route) => str_contains((string) $route->getName(), 'order')
-                || str_contains($route->uri(), 'order'),
-        ));
+        $this->assertTrue(class_exists(CreateCodOrder::class));
+        $this->assertSame('checkout/cod', app('router')->getRoutes()->getByName('checkout.cod.store')->uri());
+        $this->assertSame('orders/{orderCode}', app('router')->getRoutes()->getByName('orders.show')->uri());
     }
 
     /** @param array<string, mixed> $attributes */

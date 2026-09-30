@@ -34,7 +34,7 @@ class Order extends Model
 
         static::updating(function (Order $order): void {
             $immutable = [
-                'user_id', 'payment_attempt_id', 'request_key', 'order_code', 'payment_method',
+                'user_id', 'payment_attempt_id', 'request_key', 'idempotency_fingerprint', 'order_code', 'payment_method',
                 'recipient_name', 'recipient_email', 'recipient_phone', 'recipient_address',
                 'recipient_region', 'coupon_id', 'coupon_snapshot_json', 'items_subtotal_vnd',
                 'item_discount_vnd', 'shipping_fee_vnd', 'shipping_discount_vnd', 'total_vnd',
@@ -178,6 +178,8 @@ class Order extends Model
             if ($this->payment_attempt_id !== null
                 || ! is_string($this->request_key)
                 || ! Str::isUuid($this->request_key)
+                || ! is_string($this->idempotency_fingerprint)
+                || preg_match('/^[a-f0-9]{64}$/D', $this->idempotency_fingerprint) !== 1
                 || $this->payment_status !== PaymentStatus::Unpaid) {
                 throw new LogicException('A new COD Order requires its own request key and unpaid status.');
             }
@@ -187,6 +189,7 @@ class Order extends Model
 
         if ($this->payment_method !== PaymentMethod::VnPay
             || $this->request_key !== null
+            || $this->idempotency_fingerprint !== null
             || $this->payment_status !== PaymentStatus::Paid) {
             throw new LogicException('A new VNPay Order requires a verified paid Payment Attempt.');
         }

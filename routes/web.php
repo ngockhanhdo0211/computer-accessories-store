@@ -14,6 +14,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\OrderReceiptController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -43,7 +44,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:customer')->prefix('checkout')->name('checkout.')->group(function () {
         Route::get('/', [CheckoutController::class, 'show'])->name('show');
         Route::post('/quote', [CheckoutController::class, 'quote'])->name('quote');
+        Route::post('/cod', [CheckoutController::class, 'storeCod'])->name('cod.store');
     });
+
+    Route::get('/orders/{orderCode}', OrderReceiptController::class)
+        ->middleware('role:customer')
+        ->name('orders.show');
 
     Route::get('/dashboard', function () {
         $role = UserRole::tryFrom((string) request()->user()->getRawOriginal('role'));
