@@ -71,4 +71,9 @@ class PaymentAttempt extends Model
     {
         return $this->hasOne(Order::class);
     }
+
+    public function couponUsage(): HasOne
+    {
+        return $this->hasOne(CouponUsage::class);
+    }
 }

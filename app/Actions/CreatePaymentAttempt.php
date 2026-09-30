@@ -6,10 +6,12 @@ use App\Enums\PaymentStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\CartItem;
+use App\Models\Coupon;
 use App\Models\PaymentAttempt;
 use App\Models\Product;
 use App\Models\StockReservation;
 use App\Models\User;
+use App\ValueObjects\CheckoutQuote;
 use App\ValueObjects\CheckoutRecipient;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -23,7 +25,10 @@ class CreatePaymentAttempt
 {
     public const RESERVATION_MINUTES = 15;
 
-    public function __construct(private readonly BuildCheckoutQuote $quotes) {}
+    public function __construct(
+        private readonly BuildCheckoutQuote $quotes,
+        private readonly ReserveCouponUsage $couponUsages,
+    ) {}
 
     public function handle(
         User $user,
@@ -34,7 +39,8 @@ class CreatePaymentAttempt
     ): PaymentAttempt {
         $this->assertActiveCustomer($user);
         $requestKey = trim($requestKey);
-        $couponCode = $couponCode === null ? null : trim($couponCode);
+        $couponCode = $couponCode === null ? null : Str::upper(trim($couponCode));
+        $couponCode = $couponCode === '' ? null : $couponCode;
 
         if (! Str::isUuid($requestKey) || strlen($requestKey) !== 36) {
             throw ValidationException::withMessages([
@@ -42,19 +48,16 @@ class CreatePaymentAttempt
             ]);
         }
 
-        if ($couponCode !== null && $couponCode !== '') {
-            throw ValidationException::withMessages([
-                'coupon_code' => 'Chưa thể khởi tạo thanh toán VNPay có mã giảm giá cho đến khi Coupon Usage được triển khai.',
-            ]);
-        }
-
         $createdAt = CarbonImmutable::instance($at ?? now())->utc();
         $initialProductIds = $this->cartProductIds($user);
 
-        return DB::transaction(function () use ($user, $recipient, $requestKey, $createdAt, $initialProductIds): PaymentAttempt {
+        return DB::transaction(function () use ($user, $recipient, $requestKey, $couponCode, $createdAt, $initialProductIds): PaymentAttempt {
             $existing = $this->findExisting($user, $requestKey);
-            if ($existing !== null) {
-                return $this->replay($existing, $user, $recipient);
+
+            $coupon = $couponCode === null ? null : Coupon::query()
+                ->where('code', $couponCode)->lockForUpdate()->first();
+            if ($couponCode !== null && $coupon === null) {
+                throw ValidationException::withMessages(['coupon_code' => 'Mã giảm giá không tồn tại.']);
             }
 
             Product::query()
@@ -83,17 +86,18 @@ class CreatePaymentAttempt
                 ]);
             }
 
-            $existing = $this->findExisting($user, $requestKey);
-            if ($existing !== null) {
-                return $this->replay($existing, $user, $recipient);
+            if ($existing === null) {
+                $existing = $this->findExisting($user, $requestKey);
             }
 
-            $quote = $this->quotes->handle($user, $recipient, null, $createdAt, true);
+            $quote = $this->quotes->handle($user, $recipient, $couponCode, $createdAt, true);
 
-            if ($quote->coupon !== null) {
-                throw ValidationException::withMessages([
-                    'coupon_code' => 'Không thể giữ lượt mã giảm giá trong slice thanh toán hiện tại.',
-                ]);
+            if ($existing !== null) {
+                return $this->replay($existing, $recipient, $quote);
+            }
+
+            if ($coupon !== null) {
+                $this->couponUsages->assertCapacityLocked($coupon, $user, $createdAt);
             }
 
             $expiresAt = $createdAt->addMinutes(self::RESERVATION_MINUTES);
@@ -120,10 +124,11 @@ class CreatePaymentAttempt
                     'total_discount_vnd' => $quote->totalDiscountVnd,
                     'total_vnd' => $quote->grandTotalVnd,
                     'shipping' => $quote->shipping->toArray(),
+                    'coupon' => $quote->coupon?->toArray(),
                     'quoted_at' => $quote->quotedAt->toIso8601String(),
                 ],
                 'shipping_fee_vnd' => $quote->shippingFeeVnd,
-                'coupon_id' => null,
+                'coupon_id' => $quote->coupon?->couponId,
                 'expires_at' => $expiresAt,
                 'verified_at' => null,
                 'gateway_result_code' => null,
@@ -142,7 +147,11 @@ class CreatePaymentAttempt
                 ])->save();
             }
 
-            return $attempt->load('stockReservations');
+            if ($coupon !== null) {
+                $this->couponUsages->reserveLocked($coupon, $user, $attempt, $quote, $expiresAt, $createdAt, true);
+            }
+
+            return $attempt->load(['stockReservations', 'couponUsage']);
         }, 3);
     }
 
@@ -165,72 +174,80 @@ class CreatePaymentAttempt
 
     private function replay(
         PaymentAttempt $attempt,
-        User $user,
         CheckoutRecipient $recipient,
+        CheckoutQuote $quote,
     ): PaymentAttempt {
-        $storedLines = $this->storedIdempotencyLines($attempt);
-
-        $currentLines = CartItem::query()
-            ->where('user_id', $user->id)
-            ->orderBy('product_id')
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get(['product_id', 'quantity'])
-            ->map(fn (CartItem $item) => [
-                'product_id' => (int) $item->product_id,
-                'quantity' => (int) $item->quantity,
-            ])
-            ->all();
+        $storedPayload = $this->storedReplayPayload($attempt);
+        $currentPayload = [
+            'recipient' => $recipient->snapshot(),
+            'lines' => $this->sortLines(array_map(fn ($line) => $line->snapshot(), $quote->lines)),
+            'pricing' => $this->pricingSnapshot($quote),
+        ];
 
         try {
-            $storedFingerprint = $this->payloadFingerprint([
-                'recipient' => $attempt->recipient_snapshot_json,
-                'lines' => $storedLines,
-            ]);
-            $currentFingerprint = $this->payloadFingerprint([
-                'recipient' => $recipient->snapshot(),
-                'lines' => $currentLines,
-            ]);
+            $storedFingerprint = $storedPayload === null ? null : $this->payloadFingerprint($storedPayload);
+            $currentFingerprint = $this->payloadFingerprint($currentPayload);
         } catch (JsonException) {
             $storedFingerprint = null;
             $currentFingerprint = null;
         }
 
-        if ($attempt->coupon_id !== null
-            || $storedLines === null
-            || $storedFingerprint === null
+        if ($storedFingerprint === null
             || ! hash_equals($storedFingerprint, $currentFingerprint)) {
             throw ValidationException::withMessages([
                 'request_key' => 'Khóa chống tạo trùng đã được dùng cho một payload checkout khác.',
             ]);
         }
 
-        return $attempt->loadMissing('stockReservations');
+        return $attempt->loadMissing(['stockReservations', 'couponUsage']);
     }
 
-    /** @return list<array{product_id: int, quantity: int}>|null */
-    private function storedIdempotencyLines(PaymentAttempt $attempt): ?array
+    private function storedReplayPayload(PaymentAttempt $attempt): ?array
     {
-        if (! is_array($attempt->items_snapshot_json)) {
+        if (! is_array($attempt->items_snapshot_json)
+            || ! is_array($attempt->recipient_snapshot_json)
+            || ! is_array($attempt->pricing_snapshot_json)) {
             return null;
         }
 
-        $lines = [];
-
         foreach ($attempt->items_snapshot_json as $line) {
             if (! is_array($line)
-                || ! isset($line['product_id'], $line['quantity'])
+                || ! isset($line['product_id'], $line['quantity'], $line['unit_price_vnd'], $line['line_subtotal_vnd'])
                 || ! is_int($line['product_id'])
-                || ! is_int($line['quantity'])) {
+                || ! is_int($line['quantity'])
+                || ! is_int($line['unit_price_vnd'])
+                || ! is_int($line['line_subtotal_vnd'])) {
                 return null;
             }
-
-            $lines[] = [
-                'product_id' => $line['product_id'],
-                'quantity' => $line['quantity'],
-            ];
         }
 
+        $pricing = $attempt->pricing_snapshot_json;
+        unset($pricing['quoted_at']);
+
+        return [
+            'recipient' => $attempt->recipient_snapshot_json,
+            'lines' => $this->sortLines($attempt->items_snapshot_json),
+            'pricing' => $pricing,
+        ];
+    }
+
+    private function pricingSnapshot(CheckoutQuote $quote): array
+    {
+        return [
+            'cart_subtotal_vnd' => $quote->cartSubtotalVnd,
+            'item_discount_vnd' => $quote->productDiscountVnd,
+            'shipping_fee_vnd' => $quote->shippingFeeVnd,
+            'shipping_discount_vnd' => $quote->shippingDiscountVnd,
+            'shipping_fee_after_discount_vnd' => $quote->shippingFeeAfterDiscountVnd,
+            'total_discount_vnd' => $quote->totalDiscountVnd,
+            'total_vnd' => $quote->grandTotalVnd,
+            'shipping' => $quote->shipping->toArray(),
+            'coupon' => $quote->coupon?->toArray(),
+        ];
+    }
+
+    private function sortLines(array $lines): array
+    {
         usort($lines, fn (array $left, array $right): int => $left['product_id'] <=> $right['product_id']);
 
         return $lines;

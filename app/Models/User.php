@@ -98,6 +98,11 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    public function couponUsages(): HasMany
+    {
+        return $this->hasMany(CouponUsage::class, 'customer_id');
+    }
+
     public function orderStatusHistories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class, 'actor_id');

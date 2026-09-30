@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Actions\CalculateAvailableStock;
 use App\Actions\CreatePaymentAttempt;
 use App\Actions\ReleaseStockReservations;
+use App\Enums\CouponUsageStatus;
 use App\Enums\PaymentStatus;
 use App\Models\CartItem;
+use App\Models\Coupon;
 use App\Models\InventoryTransaction;
 use App\Models\PaymentAttempt;
 use App\Models\Product;
@@ -95,28 +97,29 @@ class PaymentAttemptFoundationTest extends TestCase
         $this->assertDatabaseCount('cart_items', 2);
         $this->assertTrue(Schema::hasTable('orders'));
         $this->assertDatabaseCount('orders', 0);
-        $this->assertFalse(Schema::hasTable('coupon_usages'));
+        $this->assertTrue(Schema::hasTable('coupon_usages'));
+        $this->assertDatabaseCount('coupon_usages', 0);
     }
 
-    public function test_coupon_quote_is_rejected_before_any_attempt_or_reservation_is_created(): void
+    public function test_coupon_quote_creates_attempt_stock_and_usage_with_one_shared_expiry(): void
     {
         $customer = User::factory()->create();
-        $this->addLine($customer);
+        $this->addLine($customer, ['price_vnd' => 100_000]);
+        $coupon = Coupon::factory()->create(['code' => 'SALE10']);
 
-        try {
-            app(CreatePaymentAttempt::class)->handle(
-                $customer,
-                $this->recipient(),
-                (string) Str::uuid(),
-                'SALE10',
-            );
-            $this->fail('A coupon-backed Payment Attempt was created without Coupon Usage.');
-        } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('coupon_code', $exception->errors());
-        }
+        $attempt = app(CreatePaymentAttempt::class)->handle(
+            $customer, $this->recipient(), (string) Str::uuid(), 'SALE10',
+        );
 
-        $this->assertDatabaseCount('payment_attempts', 0);
-        $this->assertDatabaseCount('stock_reservations', 0);
+        $this->assertTrue($attempt->coupon->is($coupon));
+        $this->assertSame(CouponUsageStatus::Reserved, $attempt->couponUsage->status);
+        $this->assertTrue($attempt->expires_at->equalTo($attempt->couponUsage->expires_at));
+        $this->assertTrue($attempt->stockReservations->every(fn ($row) => $row->expires_at->equalTo($attempt->expires_at)));
+        $this->assertSame(120_000, $attempt->pricing_snapshot_json['total_vnd']);
+        $this->assertSame('SALE10', $attempt->pricing_snapshot_json['coupon']['code']);
+        $this->assertDatabaseCount('payment_attempts', 1);
+        $this->assertDatabaseCount('stock_reservations', 1);
+        $this->assertDatabaseCount('coupon_usages', 1);
     }
 
     public function test_idempotency_replay_returns_same_attempt_and_changed_payload_conflicts(): void
@@ -175,6 +178,78 @@ class PaymentAttemptFoundationTest extends TestCase
         $this->assertSame(500_000, $attempt->pricing_snapshot_json['cart_subtotal_vnd']);
         $this->assertSame(35_000, $attempt->shipping_fee_vnd);
         $this->assertSame(535_000, $attempt->amount_vnd);
+    }
+
+    public function test_replay_normalizes_coupon_code_and_rejects_changed_price_or_shipping(): void
+    {
+        $action = app(CreatePaymentAttempt::class);
+        $coupon = Coupon::factory()->create(['code' => 'SALE10']);
+        $priceCustomer = User::factory()->create();
+        $product = $this->addLine($priceCustomer, ['price_vnd' => 200_000]);
+        $priceKey = (string) Str::uuid();
+
+        $attempt = $action->handle($priceCustomer, $this->recipient(), $priceKey, '  sale10  ');
+        $this->assertSame('SALE10', $attempt->pricing_snapshot_json['coupon']['code']);
+        $this->assertTrue($attempt->is($action->handle($priceCustomer, $this->recipient(), $priceKey, 'sale10')));
+
+        $product->update(['price_vnd' => 210_000]);
+        try {
+            $action->handle($priceCustomer, $this->recipient(), $priceKey, 'SALE10');
+            $this->fail('Changed product price was accepted for an existing request key.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('request_key', $exception->errors());
+        }
+
+        $shippingCustomer = User::factory()->create();
+        $this->addLine($shippingCustomer);
+        $shippingKey = (string) Str::uuid();
+        $action->handle($shippingCustomer, $this->recipient(), $shippingKey);
+        DB::table('shipping_rates')->where('region_key', 'ha_noi')->update(['fee_vnd' => 35_000]);
+
+        try {
+            $action->handle($shippingCustomer, $this->recipient(), $shippingKey);
+            $this->fail('Changed shipping fee was accepted for an existing request key.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('request_key', $exception->errors());
+        }
+    }
+
+    public function test_idempotency_fingerprint_keeps_scalar_types_strict(): void
+    {
+        $action = app(CreatePaymentAttempt::class);
+        $quantityCustomer = User::factory()->create();
+        $this->addLine($quantityCustomer);
+        $quantityKey = (string) Str::uuid();
+        $quantityAttempt = $action->handle($quantityCustomer, $this->recipient(), $quantityKey);
+        $stringQuantity = $quantityAttempt->items_snapshot_json;
+        $stringQuantity[0]['quantity'] = '1';
+        DB::table('payment_attempts')->where('id', $quantityAttempt->id)->update([
+            'items_snapshot_json' => json_encode($stringQuantity, JSON_THROW_ON_ERROR),
+        ]);
+
+        try {
+            $action->handle($quantityCustomer, $this->recipient(), $quantityKey);
+            $this->fail('A numeric string matched an integer idempotency payload.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('request_key', $exception->errors());
+        }
+
+        $booleanCustomer = User::factory()->create();
+        $this->addLine($booleanCustomer);
+        $booleanKey = (string) Str::uuid();
+        $booleanAttempt = $action->handle($booleanCustomer, $this->recipient(), $booleanKey);
+        $booleanPricing = $booleanAttempt->pricing_snapshot_json;
+        $booleanPricing['shipping_discount_vnd'] = false;
+        DB::table('payment_attempts')->where('id', $booleanAttempt->id)->update([
+            'pricing_snapshot_json' => json_encode($booleanPricing, JSON_THROW_ON_ERROR),
+        ]);
+
+        try {
+            $action->handle($booleanCustomer, $this->recipient(), $booleanKey);
+            $this->fail('A boolean matched an integer idempotency payload.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('request_key', $exception->errors());
+        }
     }
 
     public function test_request_key_is_customer_scoped_and_no_public_payment_route_exists(): void
@@ -349,6 +424,19 @@ class PaymentAttemptFoundationTest extends TestCase
             ->assertSuccessful();
         $this->assertDatabaseCount('inventory_transactions', 0);
         $this->assertDatabaseCount('cart_items', 5);
+    }
+
+    public function test_expiration_command_rejects_invalid_batch_without_writes(): void
+    {
+        $customer = User::factory()->create();
+        $this->addLine($customer);
+        $attempt = app(CreatePaymentAttempt::class)->handle($customer, $this->recipient(), (string) Str::uuid());
+
+        $this->artisan('stock-reservations:release-expired', ['--batch' => '0'])
+            ->expectsOutput('The batch option must be an integer from 1 to 1000.')
+            ->assertExitCode(2);
+
+        $this->assertNull($attempt->stockReservations()->firstOrFail()->released_at);
     }
 
     public function test_attempt_and_reservation_business_snapshots_are_immutable(): void

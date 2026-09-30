@@ -142,7 +142,8 @@ class CouponDatabaseTest extends TestCase
 
         $this->assertSame($brands->pluck('id')->sort()->values()->all(), collect($coupon->targetIds())->sort()->values()->all());
         $this->assertFalse(Schema::hasColumn('coupons', 'deleted_at'));
-        $this->assertFalse(Schema::hasTable('coupon_usages'));
+        $this->assertTrue(Schema::hasTable('coupon_usages'));
+        $this->assertTrue($coupon->usages->isEmpty());
     }
 
     /** @return array<string, mixed> */

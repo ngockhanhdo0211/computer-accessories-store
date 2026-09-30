@@ -74,7 +74,8 @@ class OrderPersistenceDatabaseTest extends TestCase
         $this->assertTrue($actor->orderStatusHistories->contains($history));
         $this->assertNull($order->paymentAttempt);
         $this->assertNull($order->coupon);
-        $this->assertFalse(Schema::hasTable('coupon_usages'));
+        $this->assertTrue(Schema::hasTable('coupon_usages'));
+        $this->assertNull($order->couponUsage);
     }
 
     public function test_sqlite_schema_exposes_named_constraints_indexes_and_immutable_triggers(): void
@@ -529,8 +530,9 @@ class OrderPersistenceDatabaseTest extends TestCase
         $orderMigration = require database_path('migrations/2026_09_29_000000_create_orders_table.php');
         $itemMigration = require database_path('migrations/2026_09_29_000001_create_order_items_table.php');
         $historyMigration = require database_path('migrations/2026_09_29_000002_create_order_status_histories_table.php');
+        $usageMigration = require database_path('migrations/2026_09_29_000003_create_coupon_usages_table.php');
 
-        foreach ([$orderMigration, $itemMigration, $historyMigration] as $migration) {
+        foreach ([$orderMigration, $itemMigration, $historyMigration, $usageMigration] as $migration) {
             try {
                 $migration->up();
                 $this->fail('Migration accepted a partial existing state.');
@@ -539,6 +541,7 @@ class OrderPersistenceDatabaseTest extends TestCase
             }
         }
 
+        $usageMigration->down();
         $historyMigration->down();
         $itemMigration->down();
         $orderMigration->down();
@@ -553,15 +556,17 @@ class OrderPersistenceDatabaseTest extends TestCase
         $orderMigration->up();
         $itemMigration->up();
         $historyMigration->up();
+        $usageMigration->up();
         $this->assertTrue(Schema::hasTable('orders'));
         $this->assertTrue(Schema::hasTable('order_items'));
         $this->assertTrue(Schema::hasTable('order_status_histories'));
+        $this->assertTrue(Schema::hasTable('coupon_usages'));
         $this->assertTrue(Schema::hasColumn('inventory_transactions', 'order_item_id'));
     }
 
-    public function test_no_order_route_ui_action_or_coupon_usage_foundation_is_added(): void
+    public function test_no_order_route_ui_or_order_writer_is_added(): void
     {
-        $this->assertFalse(Schema::hasTable('coupon_usages'));
+        $this->assertTrue(Schema::hasTable('coupon_usages'));
         $this->assertFalse(class_exists(CreateOrder::class));
         $this->assertFalse(collect(app('router')->getRoutes())->contains(
             fn ($route) => str_contains((string) $route->getName(), 'order')

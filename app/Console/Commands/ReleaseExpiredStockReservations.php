@@ -33,9 +33,11 @@ class ReleaseExpiredStockReservations extends Command
         PaymentAttempt::query()
             ->where('status', PaymentStatus::Unpaid)
             ->where('expires_at', '<=', $now->format('Y-m-d H:i:s.u'))
-            ->whereHas('stockReservations', fn ($query) => $query
-                ->whereNull('released_at')
-                ->whereNull('consumed_at'))
+            ->where(function ($query): void {
+                $query->whereHas('stockReservations', fn ($reservations) => $reservations
+                    ->whereNull('released_at')->whereNull('consumed_at'))
+                    ->orWhereHas('couponUsage', fn ($usage) => $usage->where('status', 'reserved'));
+            })
             ->orderBy('id')
             ->chunkById($batchSize, function ($expiredAttempts) use ($release, $now, &$released, &$attempts): void {
                 foreach ($expiredAttempts as $attempt) {

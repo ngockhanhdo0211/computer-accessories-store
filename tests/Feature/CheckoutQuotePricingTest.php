@@ -160,7 +160,8 @@ class CheckoutQuotePricingTest extends TestCase
         $this->assertSame(30_000, $shippingQuote->shippingDiscountVnd);
         $this->assertSame(0, $shippingQuote->shippingFeeAfterDiscountVnd);
         $this->assertSame(200_000, $shippingQuote->grandTotalVnd);
-        $this->assertFalse(Schema::hasTable('coupon_usages'));
+        $this->assertTrue(Schema::hasTable('coupon_usages'));
+        $this->assertDatabaseCount('coupon_usages', 0);
     }
 
     public function test_coupon_definition_is_reloaded_for_each_new_quote_request(): void
