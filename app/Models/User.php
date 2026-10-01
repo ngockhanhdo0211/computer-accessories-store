@@ -107,4 +107,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(OrderStatusHistory::class, 'actor_id');
     }
+
+    public function membershipHistories(): HasMany
+    {
+        return $this->hasMany(MembershipHistory::class)->orderBy('created_at')->orderBy('id');
+    }
+
+    public function requestedMembershipHistories(): HasMany
+    {
+        return $this->hasMany(MembershipHistory::class, 'requested_by');
+    }
 }

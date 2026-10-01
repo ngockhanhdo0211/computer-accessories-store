@@ -73,4 +73,4 @@ Các từ khóa trạng thái/mã dưới đây là giá trị nghiệp vụ đ�
 | `vang` | Từ 15.000.000 VND |
 | `kim_cuong` | Từ 30.000.000 VND |
 
-Chi tiêu xét hạng là tiền sản phẩm sau discount của order `da_giao`, không gồm shipping. Full refund loại toàn bộ giá trị order khỏi chi tiêu. Hạng cập nhật tự động và lưu lịch sử. Admin không sửa hạng trực tiếp, chỉ yêu cầu recalculation có audit log. Hạng dùng để xét điều kiện mã giảm giá, chưa tự động giảm giá toàn hệ thống.
+Chi tiêu xét hạng là tiền sản phẩm sau discount của order `da_giao`, không gồm shipping: trên snapshot Order hiện tại là `items_subtotal_vnd - item_discount_vnd`. Product promotion đã nằm trong giá snapshot; cart/product/category/brand coupon làm giảm `item_discount_vnd`; `free_shipping` chỉ giảm shipping nên không đổi chi tiêu xét hạng. Full refund loại toàn bộ giá trị order khỏi chi tiêu. Hạng cập nhật tự động; membership history chỉ ghi khi hạng thay đổi, không ghi một dòng cho mỗi lần tổng chi tiêu tăng nhưng vẫn ở cùng hạng. Admin không sửa hạng trực tiếp, chỉ yêu cầu recalculation có audit log. Hạng dùng để xét điều kiện mã giảm giá, chưa tự động giảm giá toàn hệ thống.

@@ -6,7 +6,7 @@
 
 | Nhóm | Thực thể dự kiến | Quan hệ và bất biến chính |
 | --- | --- | --- |
-| Tài khoản | users, member_tier_histories, audit_logs | User có role/status; `locked`/`inactive` từ chối đăng nhập và thu hồi session. Admin mở khóa/kích hoạt lại; password reset không mở khóa. Hạng tự tính, admin chỉ yêu cầu recalculation có audit. Admin đầu tiên dự kiến tạo qua lệnh Artisan tương tác `app:create-admin`; không hard-code, factory chỉ cho test. |
+| Tài khoản | users, membership_histories, audit_logs | User có role/status; `locked`/`inactive` từ chối đăng nhập và thu hồi session. Admin mở khóa/kích hoạt lại; password reset không mở khóa. Hạng tự tính, admin chỉ yêu cầu recalculation có audit. Admin đầu tiên dự kiến tạo qua lệnh Artisan tương tác `app:create-admin`; không hard-code, factory chỉ cho test. |
 | Catalog | categories, brands, products, product_images | Danh mục cha-con không chu trình; SKU và các slug unique. Product bắt buộc một category và một brand. Category/brand ẩn giữ quan hệ nhưng product liên quan không hiển thị/bán công khai; admin vẫn quản lý, cảnh báo số product ảnh hưởng. |
 | Giỏ | carts, cart_items | Thuộc customer; giá/khả dụng phải tính lại lúc checkout, không tin snapshot giỏ. |
 | Kho | inventory_balances hoặc trường số lượng thích hợp; inventory_transactions; stock_reservations; adjustment_requests; return_inspections | Một kho. Tồn khả dụng trừ reservation còn hiệu lực, không âm. Hàng chờ kiểm tra không vào tồn khả dụng; hàng tốt hoàn bán được, hàng hỏng vào `damaged_quantity`. Employee đề nghị điều chỉnh, admin duyệt; admin điều chỉnh trực tiếp có lý do/audit. |
