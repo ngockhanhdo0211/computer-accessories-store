@@ -71,6 +71,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/orders/{orderCode}', [ManagedOrderController::class, 'show'])
             ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
             ->name('orders.show');
+        Route::patch('/orders/{orderCode}/status', [ManagedOrderController::class, 'transition'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('orders.transition');
     });
     Route::get('/admin/dashboard', AdminDashboardController::class)
         ->middleware('role:admin')->name('admin.dashboard');
@@ -99,6 +102,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/orders/{orderCode}', [ManagedOrderController::class, 'show'])
             ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
             ->name('orders.show');
+        Route::patch('/orders/{orderCode}/status', [ManagedOrderController::class, 'transition'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('orders.transition');
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('brands', BrandController::class)->except('show');
         Route::resource('coupons', CouponController::class)->except('show');

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Actions\GetOrders;
+use App\Actions\TransitionOrderStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Http\Requests\OrderIndexRequest;
+use App\Http\Requests\TransitionOrderStatusRequest;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,6 +44,24 @@ class ManagedOrderController extends Controller
             'order' => $orders->managedDetail($orderCode),
             'routePrefix' => $this->routePrefix($request),
         ]);
+    }
+
+    public function transition(
+        TransitionOrderStatusRequest $request,
+        TransitionOrderStatus $transition,
+        string $orderCode,
+    ): RedirectResponse {
+        $transition->handle(
+            $orderCode,
+            $request->user(),
+            $request->targetStatus(),
+            $request->eventKey(),
+            $request->validated('reason'),
+        );
+
+        return redirect()
+            ->route($this->routePrefix($request).'.orders.show', $orderCode)
+            ->with('status', 'Đã cập nhật tiến trình vận chuyển.');
     }
 
     private function routePrefix(Request $request): string

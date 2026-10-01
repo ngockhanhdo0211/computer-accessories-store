@@ -31,7 +31,7 @@ Các từ khóa trạng thái/mã dưới đây là giá trị nghiệp vụ đ�
 - Backend kiểm tra lại sản phẩm, giá, tồn kho, mã giảm giá; phí vận chuyển do server tính. Khách nhập người nhận, chọn COD/VNPay và xem bước xác nhận trước khi đặt. Chống tạo đơn trùng.
 - Khi đơn được tạo hợp lệ, lưu order, order items, biến động kho, lượt dùng mã, trạng thái và cập nhật giỏ trong transaction. Với COD, thực hiện khi xác nhận đặt đơn; với VNPay, chỉ thực hiện sau khi xác minh thành công và chuyển reservation thành xuất kho. Order item lưu snapshot tên, SKU, giá và phần discount được phân bổ lúc mua; order lưu snapshot người nhận và ưu đãi.
 - Customer chỉ hủy đơn của mình ở `da_dat`. Employee hủy `da_dat` hoặc `cho_chuyen_phat` khi có lý do. Không hủy trực tiếp đơn `dang_trung_chuyen`; chỉ admin chuyển sang `da_huy` sau khi xác nhận hàng quay lại. Không xóa đơn; xem [04-order-lifecycle.md](04-order-lifecycle.md).
-- Quản lý đơn và quản lý vận chuyển là hai màn hình. Tra cứu theo mã đơn, tài khoản đặt, người nhận, email, điện thoại, địa chỉ; lọc theo trạng thái vận chuyển/thanh toán, phương thức thanh toán, khoảng thời gian; có phân trang và mặc định mới nhất trước.
+- Màn hình quản lý đơn hỗ trợ tra cứu, xem chi tiết và trong Order Transit Progression Phase 1 cho Admin/Employee thực hiện hai bước tiến vận chuyển đã chốt. Tra cứu theo mã đơn, tài khoản đặt, người nhận, email, điện thoại, địa chỉ; lọc theo trạng thái vận chuyển/thanh toán, phương thức thanh toán, khoảng thời gian; có phân trang và mặc định mới nhất trước. Các thao tác giao thành công và hủy vẫn thuộc slice tương lai.
 
 ## Tiền
 
@@ -42,7 +42,7 @@ Các từ khóa trạng thái/mã dưới đây là giá trị nghiệp vụ đ�
 ## Thanh toán
 
 - Phương thức: `cod`, `vnpay`. Trạng thái thanh toán: `chua_thanh_toan`, `da_thanh_toan`, `that_bai`, `hoan_tien`, độc lập với vận chuyển.
-- COD tạo đơn hợp lệ ở `chua_thanh_toan`; chỉ ghi `da_thanh_toan` khi giao thành công.
+- COD tạo đơn hợp lệ ở `chua_thanh_toan`; chỉ ghi `da_thanh_toan` khi giao thành công. Khi một COD bị hủy trong slice cancellation tương lai, `order_status` chuyển `da_huy` nhưng `payment_status` giữ nguyên `chua_thanh_toan`, không đổi thành `that_bai`, vì chưa có giao dịch thanh toán thất bại.
 - Trước khi chuyển sang VNPay, tạo `payment_attempt` và `stock_reservation` 15 phút, chưa tạo order chính thức. Tồn khả dụng trừ reservation còn hiệu lực. Khi xác minh chữ ký, số tiền và mã giao dịch thành công trong hạn, tạo một order `da_dat` và chuyển reservation thành xuất kho. Callback idempotent, chỉ tạo một order và xử lý kho một lần.
 - Nếu callback thành công sau khi reservation hết hạn/được giải phóng: kiểm tra lại tồn khả dụng trong transaction. Còn đủ thì tạo một order `da_dat` và xuất kho đúng một lần; không đủ thì không tạo order, lưu payment đã thành công và tạo refund `pending` liên kết `payment_attempt`. Thất bại hoặc hết hạn giải phóng reservation; thanh toán thất bại không trừ kho, xóa giỏ hay tiêu thụ mã.
 - Refund có `pending`, `succeeded`, `failed`, có thể gắn `payment_attempt` khi chưa có order. Phiên bản đầu chỉ full refund; không hoàn vượt số đã thanh toán và không xử lý refund thành công hai lần. Với order VNPay đã thanh toán bị hủy, trong khi refund chờ/thất bại, `payment_status` vẫn `da_thanh_toan`; chỉ chuyển `hoan_tien` khi refund thành công.

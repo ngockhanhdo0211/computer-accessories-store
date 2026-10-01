@@ -1137,6 +1137,15 @@ h1, h2, h3 { min-width: 0; overflow-wrap: anywhere; font-family: var(--font-disp
 .payment-attempt-summary dl div { display: flex; justify-content: space-between; gap: var(--space-3); padding-block: var(--space-1); }
 .payment-attempt-summary dt { color: var(--color-ink-muted); }
 .payment-attempt-summary dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.order-transition { margin-top: var(--space-6); padding-top: var(--space-5); border-top: var(--border-thin) solid var(--color-line); }
+.order-transition h2 { margin: var(--space-1) 0 var(--space-2); font-size: var(--text-xl); }
+.order-transition > p:not(.section-label) { margin: 0; color: var(--color-ink-muted); font-size: var(--text-sm); }
+.order-transition form { display: grid; gap: var(--space-4); margin-top: var(--space-5); }
+.order-transition .field { margin: 0; }
+.order-transition .field label span { color: var(--color-ink-muted); font-weight: 500; }
+.order-transition .button { width: 100%; }
+.order-transition__error { margin: var(--space-4) 0 0; }
+
 
 @media (max-width: 80rem) {
   .managed-order-table-wrap { overflow: visible; border: 0; box-shadow: none; }

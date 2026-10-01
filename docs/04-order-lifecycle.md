@@ -20,10 +20,13 @@ da_dat ────────────────> cho_chuyen_phat ──�
 
 `da_giao` và `da_huy` là trạng thái kết thúc. Cấm nhảy bước, đưa đơn đã giao về trạng thái cũ, tự ý khôi phục đơn đã hủy hoặc xóa đơn. Mỗi lần đổi trạng thái lưu trạng thái cũ, mới, người thực hiện, thời gian và ghi chú/lý do. Trạng thái đơn không được dùng thay trạng thái thanh toán.
 
+**Trạng thái triển khai hiện tại — Order Transit Progression Phase 1:** Admin/Employee chỉ có thể thực hiện `da_dat → cho_chuyen_phat` và `cho_chuyen_phat → dang_trung_chuyen`. Mỗi thao tác khóa Order, dùng event key chống lặp, ghi Order Status History và audit trong cùng transaction. Các cạnh đến `da_giao`/`da_huy`, Customer cancel và mọi hiệu ứng giao/hủy bên dưới vẫn là contract cho slice tương lai, chưa được triển khai.
+
 ## Hiệu ứng khi chuyển trạng thái
 
 - Khi đơn hợp lệ được tạo: lưu snapshot order/items/người nhận/ưu đãi và discount phân bổ theo item; ghi trạng thái đầu `da_dat`; trừ kho và ghi `sale` đúng một lần. COD bắt đầu `chua_thanh_toan`. VNPay chỉ tạo order sau khi thanh toán được xác minh thành công và reservation được chuyển thành `sale`.
 - Khi hủy trước bàn giao: kiểm tra hàng đang tại kho, ghi `cancel_restore`/`damaged` phù hợp và hoàn tồn bán được ngay đúng một lần cho phần hàng tốt. Nếu đã `dang_trung_chuyen`, hủy/giao thất bại không cộng tồn khả dụng khi hàng còn trên đường hoặc chờ kiểm tra; chỉ admin chuyển `da_huy` sau khi xác nhận hàng quay lại và đã kiểm tra, rồi hoàn hàng tốt hoặc ghi `damaged_quantity` đúng một lần.
+- Khi COD được hủy trong slice cancellation tương lai: `order_status` chuyển `da_huy`, còn `payment_status` giữ `chua_thanh_toan`; không dùng `that_bai` vì COD chưa phát sinh giao dịch thanh toán thất bại.
 - COD hủy toàn bộ trả lượt coupon. VNPay chỉ trả lượt coupon sau full refund `succeeded`; refund `failed` không trả lượt, kể cả mã `free_shipping`.
 - Đơn VNPay đã thanh toán khi hủy tạo refund riêng `pending`; refund có thể `succeeded` hoặc `failed`. Chỉ full refund trong phiên bản đầu; không hoàn vượt tiền đã thanh toán hoặc ghi thành công hai lần. Khi còn `pending`/`failed`, `payment_status` vẫn `da_thanh_toan`; chỉ chuyển `hoan_tien` khi `succeeded`. Refund cũng có thể gắn payment attempt thành công mà chưa có order.
 - Khi `da_giao`: tăng số lượng đã bán đúng một lần; COD đổi sang `da_thanh_toan` khi ghi nhận giao thành công. Hạng dùng tiền sản phẩm sau discount, không shipping; full refund loại order khỏi chi tiêu và cập nhật hạng tự động.
@@ -37,4 +40,4 @@ Callback thành công **sau khi reservation hết hạn**: kiểm tra lại tồ
 
 ## Màn hình vận hành
 
-Quản lý đơn hàng chỉ tra cứu và xem chi tiết. Quản lý vận chuyển cập nhật trạng thái. Danh sách hỗ trợ tìm mã đơn, tài khoản đặt, người nhận, email, số điện thoại, địa chỉ; lọc trạng thái vận chuyển/thanh toán, phương thức và khoảng thời gian; phân trang, mới nhất trước.
+Quản lý đơn hàng hỗ trợ tra cứu, xem chi tiết và trong Phase 1 cho Admin/Employee thực hiện đúng hai bước tiến vận chuyển đã nêu; các thao tác giao/hủy chưa xuất hiện. Danh sách hỗ trợ tìm mã đơn, tài khoản đặt, người nhận, email, số điện thoại, địa chỉ; lọc trạng thái vận chuyển/thanh toán, phương thức và khoảng thời gian; phân trang, mới nhất trước.
