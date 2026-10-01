@@ -74,6 +74,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::patch('/orders/{orderCode}/status', [ManagedOrderController::class, 'transition'])
             ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
             ->name('orders.transition');
+        Route::patch('/orders/{orderCode}/cancel', [ManagedOrderController::class, 'cancel'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('orders.cancel');
+        Route::patch('/orders/{orderCode}/deliver', [ManagedOrderController::class, 'deliver'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('orders.deliver');
     });
     Route::get('/admin/dashboard', AdminDashboardController::class)
         ->middleware('role:admin')->name('admin.dashboard');
@@ -105,6 +111,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::patch('/orders/{orderCode}/status', [ManagedOrderController::class, 'transition'])
             ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
             ->name('orders.transition');
+        Route::patch('/orders/{orderCode}/cancel', [ManagedOrderController::class, 'cancel'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('orders.cancel');
+        Route::patch('/orders/{orderCode}/deliver', [ManagedOrderController::class, 'deliver'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('orders.deliver');
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('brands', BrandController::class)->except('show');
         Route::resource('coupons', CouponController::class)->except('show');

@@ -4,6 +4,8 @@
 @php
     $indexRoute = $routePrefix.'.orders.index';
     $transitionRoute = $routePrefix.'.orders.transition';
+    $cancelRoute = $routePrefix.'.orders.cancel';
+    $deliverRoute = $routePrefix.'.orders.deliver';
     $nextStatus = match($order->status) {
         \App\Enums\OrderStatus::Placed => \App\Enums\OrderStatus::AwaitingHandoff,
         \App\Enums\OrderStatus::AwaitingHandoff => \App\Enums\OrderStatus::InTransit,
@@ -52,17 +54,72 @@
                         @csrf
                         @method('PATCH')
                         <input type="hidden" name="target_status" value="{{ $nextStatus->value }}">
-                        <input type="hidden" name="event_key" value="{{ $errors->has('event_key') ? (string) \Illuminate\Support\Str::uuid() : old('event_key', (string) \Illuminate\Support\Str::uuid()) }}">
+                        <input type="hidden" name="event_key" value="{{ $errors->has('event_key') || !$errors->hasAny(['authorization', 'target_status', 'event_key', 'reason']) ? (string) \Illuminate\Support\Str::uuid() : old('event_key', (string) \Illuminate\Support\Str::uuid()) }}">
                         @error('authorization')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                         @error('target_status')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                         @error('event_key')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                         <div class="field">
                             <label for="reason">Ghi chú vận hành <span>(không bắt buộc)</span></label>
-                            <textarea id="reason" name="reason" rows="3" maxlength="500" aria-describedby="reason-message" @error('reason') aria-invalid="true" @enderror>{{ old('reason') }}</textarea>
+                            <textarea id="reason" name="reason" rows="3" maxlength="500" aria-describedby="reason-message" @error('reason') aria-invalid="true" @enderror>{{ $errors->hasAny(['authorization', 'target_status', 'event_key', 'reason']) ? old('reason') : '' }}</textarea>
                             <p id="reason-message" class="field-message @error('reason') field-error @enderror">@error('reason'){{ $message }}@else Ghi lại thông tin bàn giao hữu ích cho lịch sử đơn. @enderror</p>
                         </div>
                         <button class="button" type="submit">{{ $transitionLabel }}</button>
                     </form>
+                </section>
+            @endif
+
+            @if($canCancelCod || $canDeliverCod)
+                <section class="order-transition order-terminal-actions" aria-labelledby="order-terminal-title">
+                    <p class="section-label">Kết thúc vòng đời COD</p>
+                    <h2 id="order-terminal-title">Thao tác đơn hàng</h2>
+
+                    @if($canDeliverCod)
+                        <form method="POST" action="{{ route($deliverRoute, $order->order_code) }}" data-submit-once data-confirm-action="Xác nhận đơn COD đã được giao thành công?">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="event_key" value="{{ $errors->deliverOrder->has('event_key') || !$errors->deliverOrder->any() ? (string) \Illuminate\Support\Str::uuid() : old('event_key', (string) \Illuminate\Support\Str::uuid()) }}">
+                            @if($errors->deliverOrder->any())
+                                <div class="alert alert--error order-transition__error" role="alert">Không thể xác nhận giao đơn. Hãy kiểm tra thông tin bên dưới.</div>
+                            @endif
+                            @foreach(['authorization', 'order', 'inventory', 'event_key', 'request'] as $field)
+                                @error($field, 'deliverOrder')<p class="field-error" role="alert">{{ $message }}</p>@enderror
+                            @endforeach
+                            <div class="field">
+                                <label for="delivery-reason">Ghi chú giao hàng <span>(không bắt buộc)</span></label>
+                                <textarea id="delivery-reason" name="reason" rows="3" maxlength="500" aria-describedby="delivery-reason-message" @error('reason', 'deliverOrder') aria-invalid="true" @enderror>{{ $errors->deliverOrder->any() ? old('reason') : '' }}</textarea>
+                                <p id="delivery-reason-message" class="field-message @error('reason', 'deliverOrder') field-error @enderror">@error('reason', 'deliverOrder'){{ $message }}@else Chỉ xác nhận khi đơn đã được giao thành công cho người nhận. @enderror</p>
+                            </div>
+                            <button class="button" type="submit">Xác nhận đã giao</button>
+                        </form>
+                    @endif
+
+                    @if($canCancelCod)
+                        <div class="order-terminal-actions__divider" aria-hidden="true"></div>
+                        @if(!$inspectionReady)
+                            <div class="empty-state empty-state--compact">
+                                <h3>Chưa thể hủy đơn</h3>
+                                <p>Phải tiếp nhận và hoàn tất phân loại toàn bộ Order Item trước khi hoàn kho.</p>
+                            </div>
+                        @else
+                            <form method="POST" action="{{ route($cancelRoute, $order->order_code) }}" data-submit-once data-confirm-action="Hủy đơn COD và hoàn kho theo kết quả kiểm tra?">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="event_key" value="{{ $errors->cancelOrder->has('event_key') || !$errors->cancelOrder->any() ? (string) \Illuminate\Support\Str::uuid() : old('event_key', (string) \Illuminate\Support\Str::uuid()) }}">
+                                @if($errors->cancelOrder->any())
+                                    <div class="alert alert--error order-transition__error" role="alert">Không thể hủy đơn. Hãy kiểm tra thông tin bên dưới.</div>
+                                @endif
+                                @foreach(['authorization', 'order', 'inspection', 'inventory', 'coupon_usage', 'event_key', 'request'] as $field)
+                                    @error($field, 'cancelOrder')<p class="field-error" role="alert">{{ $message }}</p>@enderror
+                                @endforeach
+                                <div class="field">
+                                    <label for="cancel-reason">Lý do hủy</label>
+                                    <textarea id="cancel-reason" name="reason" rows="3" maxlength="500" required aria-describedby="cancel-reason-message" @error('reason', 'cancelOrder') aria-invalid="true" @enderror>{{ $errors->cancelOrder->any() ? old('reason') : '' }}</textarea>
+                                    <p id="cancel-reason-message" class="field-message @error('reason', 'cancelOrder') field-error @enderror">@error('reason', 'cancelOrder'){{ $message }}@else Lý do được lưu vào lịch sử trạng thái và audit. @enderror</p>
+                                </div>
+                                <button class="button button--danger" type="submit">Hủy đơn và hoàn kho</button>
+                            </form>
+                        @endif
+                    @endif
                 </section>
             @endif
         </aside>

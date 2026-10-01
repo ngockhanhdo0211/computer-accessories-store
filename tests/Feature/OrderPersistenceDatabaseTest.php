@@ -532,6 +532,7 @@ class OrderPersistenceDatabaseTest extends TestCase
         $historyMigration = require database_path('migrations/2026_09_29_000002_create_order_status_histories_table.php');
         $usageMigration = require database_path('migrations/2026_09_29_000003_create_coupon_usages_table.php');
         $inspectionMigration = require database_path('migrations/2026_10_01_000001_create_return_inspections_table.php');
+        $terminalMigration = require database_path('migrations/2026_10_01_000002_enable_cod_terminal_lifecycle.php');
 
         foreach ([$orderMigration, $itemMigration, $historyMigration, $usageMigration, $inspectionMigration] as $migration) {
             try {
@@ -542,6 +543,7 @@ class OrderPersistenceDatabaseTest extends TestCase
             }
         }
 
+        $terminalMigration->down();
         $usageMigration->down();
         $historyMigration->down();
         $inspectionMigration->down();
@@ -562,6 +564,7 @@ class OrderPersistenceDatabaseTest extends TestCase
         $inspectionMigration->up();
         $historyMigration->up();
         $usageMigration->up();
+        $terminalMigration->up();
         $this->assertTrue(Schema::hasTable('orders'));
         $this->assertTrue(Schema::hasTable('order_items'));
         $this->assertTrue(Schema::hasTable('order_status_histories'));

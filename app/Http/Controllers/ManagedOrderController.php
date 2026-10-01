@@ -2,16 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CancelCodOrder;
+use App\Actions\DeliverCodOrder;
 use App\Actions\GetOrders;
+use App\Actions\OrderHasCompletedReturnInspections;
 use App\Actions\TransitionOrderStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\UserRole;
+use App\Http\Requests\CancelCodOrderRequest;
+use App\Http\Requests\DeliverCodOrderRequest;
 use App\Http\Requests\OrderIndexRequest;
 use App\Http\Requests\TransitionOrderStatusRequest;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ManagedOrderController extends Controller
 {
@@ -38,11 +45,29 @@ class ManagedOrderController extends Controller
         ]);
     }
 
-    public function show(Request $request, GetOrders $orders, string $orderCode): View
-    {
+    public function show(
+        Request $request,
+        GetOrders $orders,
+        OrderHasCompletedReturnInspections $inspectionReadiness,
+        string $orderCode,
+    ): View {
+        $order = $orders->managedDetail($orderCode);
+        $role = UserRole::tryFrom((string) $request->user()->getRawOriginal('role'));
+        $inspectionReady = $inspectionReadiness->handle($order);
+
         return view('managed-orders.show', [
-            'order' => $orders->managedDetail($orderCode),
+            'order' => $order,
             'routePrefix' => $this->routePrefix($request),
+            'inspectionReady' => $inspectionReady,
+            'canCancelCod' => $order->payment_method === PaymentMethod::CashOnDelivery
+                && $order->payment_status === PaymentStatus::Unpaid
+                && $order->delivered_at === null
+                && in_array($order->status, [OrderStatus::Placed, OrderStatus::AwaitingHandoff, OrderStatus::InTransit], true)
+                && ($order->status !== OrderStatus::InTransit || $role === UserRole::Admin),
+            'canDeliverCod' => $order->payment_method === PaymentMethod::CashOnDelivery
+                && $order->payment_status === PaymentStatus::Unpaid
+                && $order->delivered_at === null
+                && $order->status === OrderStatus::InTransit,
         ]);
     }
 
@@ -62,6 +87,54 @@ class ManagedOrderController extends Controller
         return redirect()
             ->route($this->routePrefix($request).'.orders.show', $orderCode)
             ->with('status', 'Đã cập nhật tiến trình vận chuyển.');
+    }
+
+    public function cancel(
+        CancelCodOrderRequest $request,
+        CancelCodOrder $cancel,
+        string $orderCode,
+    ): RedirectResponse {
+        try {
+            $cancel->handle(
+                $orderCode,
+                $request->user(),
+                $request->validated('event_key'),
+                $request->validated('reason'),
+            );
+        } catch (ValidationException $exception) {
+            return redirect()
+                ->route($this->routePrefix($request).'.orders.show', $orderCode)
+                ->withErrors($exception->errors(), 'cancelOrder')
+                ->withInput($request->safe()->only(['event_key', 'reason']));
+        }
+
+        return redirect()
+            ->route($this->routePrefix($request).'.orders.show', $orderCode)
+            ->with('status', 'Đã hủy đơn COD và hoàn kho theo kết quả kiểm tra.');
+    }
+
+    public function deliver(
+        DeliverCodOrderRequest $request,
+        DeliverCodOrder $deliver,
+        string $orderCode,
+    ): RedirectResponse {
+        try {
+            $deliver->handle(
+                $orderCode,
+                $request->user(),
+                $request->validated('event_key'),
+                $request->validated('reason'),
+            );
+        } catch (ValidationException $exception) {
+            return redirect()
+                ->route($this->routePrefix($request).'.orders.show', $orderCode)
+                ->withErrors($exception->errors(), 'deliverOrder')
+                ->withInput($request->safe()->only(['event_key', 'reason']));
+        }
+
+        return redirect()
+            ->route($this->routePrefix($request).'.orders.show', $orderCode)
+            ->with('status', 'Đã xác nhận giao đơn COD thành công.');
     }
 
     private function routePrefix(Request $request): string

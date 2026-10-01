@@ -1145,6 +1145,13 @@ h1, h2, h3 { min-width: 0; overflow-wrap: anywhere; font-family: var(--font-disp
 .order-transition .field label span { color: var(--color-ink-muted); font-weight: 500; }
 .order-transition .button { width: 100%; }
 .order-transition__error { margin: var(--space-4) 0 0; }
+.order-terminal-actions__divider { height: var(--border-thin); margin: var(--space-5) 0; background: var(--color-line); }
+.order-terminal-actions .empty-state--compact { margin-top: var(--space-4); padding: var(--space-5); text-align: left; }
+.order-terminal-actions .empty-state--compact h3 { margin: 0 0 var(--space-2); font-size: var(--text-base); }
+.order-terminal-actions .empty-state--compact p { margin: 0; }
+.order-terminal-actions .button--danger { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
+.order-terminal-actions .button--danger:hover { background: var(--color-ink); border-color: var(--color-ink); }
+.order-terminal-actions .button--danger:disabled:hover { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
 
 
 @media (max-width: 80rem) {

@@ -26,15 +26,16 @@ class ReceiveReturnInspection
     ): ReturnInspection {
         $note = $this->normalizeInspectionNote($note);
         $receivedAt = CarbonImmutable::instance($receivedAt)->utc();
+        $orderId = (int) Order::query()->where('order_code', $orderCode)->firstOrFail(['id'])->id;
 
-        return DB::transaction(function () use ($orderCode, $orderItemId, $actor, $receivedAt, $note): ReturnInspection {
-            [$order, $item] = $this->lockOrderAndItem($orderCode, $orderItemId);
-            $inspection = ReturnInspection::query()->where('order_item_id', $item->id)->lockForUpdate()->first();
-            $currentActor = User::query()->sharedLock()->find($actor->getKey());
+        return DB::transaction(function () use ($orderId, $orderItemId, $actor, $receivedAt, $note): ReturnInspection {
+            $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
 
             if ($currentActor === null) {
                 $this->deny();
             }
+            [$order, $item] = $this->lockOrderAndItem($orderId, $orderItemId);
+            $inspection = ReturnInspection::query()->where('order_item_id', $item->id)->lockForUpdate()->first();
             $this->assertReturnInspectionAccess($currentActor, $order);
 
             if ($inspection !== null) {
@@ -99,9 +100,9 @@ class ReceiveReturnInspection
     }
 
     /** @return array{Order, OrderItem} */
-    private function lockOrderAndItem(string $orderCode, int $orderItemId): array
+    private function lockOrderAndItem(int $orderId, int $orderItemId): array
     {
-        $order = Order::query()->where('order_code', $orderCode)->lockForUpdate()->firstOrFail();
+        $order = Order::query()->lockForUpdate()->findOrFail($orderId);
         $items = OrderItem::query()->where('order_id', $order->id)->orderBy('id')->lockForUpdate()->get();
         $item = $items->first(fn (OrderItem $candidate): bool => $candidate->id === $orderItemId);
 

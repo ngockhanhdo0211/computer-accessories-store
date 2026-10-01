@@ -503,6 +503,7 @@ class ReturnInspectionFoundationTest extends TestCase
     public function test_migration_guards_partial_state_and_round_trips_only_when_empty(): void
     {
         $migration = require database_path('migrations/2026_10_01_000001_create_return_inspections_table.php');
+        $terminalMigration = require database_path('migrations/2026_10_01_000002_enable_cod_terminal_lifecycle.php');
 
         try {
             $migration->up();
@@ -511,10 +512,12 @@ class ReturnInspectionFoundationTest extends TestCase
             $this->assertStringContainsString('partial migration state', $exception->getMessage());
         }
 
+        $terminalMigration->down();
         $migration->down();
         $this->assertFalse(Schema::hasTable('return_inspections'));
         $this->assertFalse(Schema::hasColumn('inventory_transactions', 'return_inspection_id'));
         $migration->up();
+        $terminalMigration->up();
         $this->assertTrue(Schema::hasTable('return_inspections'));
         $this->assertTrue(Schema::hasColumn('inventory_transactions', 'return_inspection_id'));
     }
@@ -541,6 +544,7 @@ class ReturnInspectionFoundationTest extends TestCase
         [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 2);
         $admin = User::factory()->admin()->create();
         $inspection = app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, now());
+        $inspection = app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $admin, 2, 0);
         DB::table('inventory_transactions')->insert([
             'product_id' => $item->product_id,
             'type' => 'cancel_restore',
