@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use LogicException;
 
 class OrderItem extends Model
@@ -58,5 +59,10 @@ class OrderItem extends Model
     public function inventoryTransactions(): HasMany
     {
         return $this->hasMany(InventoryTransaction::class);
+    }
+
+    public function returnInspection(): HasOne
+    {
+        return $this->hasOne(ReturnInspection::class);
     }
 }

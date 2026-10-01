@@ -16,6 +16,8 @@ Ký hiệu: **Có** = được phép trong phạm vi và điều kiện nêu dư
 | Sửa review của mình trong 7 ngày; soft delete review của mình | Có | Không | Không |
 | Tra cứu và xem chi tiết đơn toàn hệ thống | Không | Có | Có |
 | Cập nhật vận chuyển theo luồng hợp lệ | Không | Có | Có |
+| Tiếp nhận/hoàn tất kiểm tra hàng hoàn của Order `da_dat`/`cho_chuyen_phat` | Không | Có | Có |
+| Tiếp nhận/hoàn tất kiểm tra hàng hoàn của Order `dang_trung_chuyen` | Không | Không | Có |
 | Tạo đề nghị điều chỉnh kho có lý do | Không | Có | Có |
 | Duyệt đề nghị/điều chỉnh kho trực tiếp có lý do và audit | Không | Không | Có |
 | Quản lý sản phẩm, ảnh, danh mục, thương hiệu | Không | Không | Có |

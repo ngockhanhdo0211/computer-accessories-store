@@ -48,4 +48,9 @@ class InventoryTransaction extends Model
     {
         return $this->belongsTo(OrderItem::class);
     }
+
+    public function returnInspection(): BelongsTo
+    {
+        return $this->belongsTo(ReturnInspection::class);
+    }
 }

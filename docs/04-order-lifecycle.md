@@ -22,6 +22,8 @@ da_dat ────────────────> cho_chuyen_phat ──�
 
 **Trạng thái triển khai hiện tại — Order Transit Progression Phase 1:** Admin/Employee chỉ có thể thực hiện `da_dat → cho_chuyen_phat` và `cho_chuyen_phat → dang_trung_chuyen`. Mỗi thao tác khóa Order, dùng event key chống lặp, ghi Order Status History và audit trong cùng transaction. Các cạnh đến `da_giao`/`da_huy`, Customer cancel và mọi hiệu ứng giao/hủy bên dưới vẫn là contract cho slice tương lai, chưa được triển khai.
 
+**Return Inspection Foundation:** Đã có chứng từ hai giai đoạn theo từng Order Item. Employee/Admin active được tiếp nhận và hoàn tất kiểm tra ở `da_dat`/`cho_chuyen_phat`; chỉ Admin active được thao tác ở `dang_trung_chuyen`. Foundation chỉ ghi bằng chứng và audit, chưa đổi Order sang `da_huy`, chưa hoàn kho hay tạo inventory transaction.
+
 ## Hiệu ứng khi chuyển trạng thái
 
 - Khi đơn hợp lệ được tạo: lưu snapshot order/items/người nhận/ưu đãi và discount phân bổ theo item; ghi trạng thái đầu `da_dat`; trừ kho và ghi `sale` đúng một lần. COD bắt đầu `chua_thanh_toan`. VNPay chỉ tạo order sau khi thanh toán được xác minh thành công và reservation được chuyển thành `sale`.

@@ -531,8 +531,9 @@ class OrderPersistenceDatabaseTest extends TestCase
         $itemMigration = require database_path('migrations/2026_09_29_000001_create_order_items_table.php');
         $historyMigration = require database_path('migrations/2026_09_29_000002_create_order_status_histories_table.php');
         $usageMigration = require database_path('migrations/2026_09_29_000003_create_coupon_usages_table.php');
+        $inspectionMigration = require database_path('migrations/2026_10_01_000001_create_return_inspections_table.php');
 
-        foreach ([$orderMigration, $itemMigration, $historyMigration, $usageMigration] as $migration) {
+        foreach ([$orderMigration, $itemMigration, $historyMigration, $usageMigration, $inspectionMigration] as $migration) {
             try {
                 $migration->up();
                 $this->fail('Migration accepted a partial existing state.');
@@ -543,25 +544,31 @@ class OrderPersistenceDatabaseTest extends TestCase
 
         $usageMigration->down();
         $historyMigration->down();
+        $inspectionMigration->down();
         $itemMigration->down();
         $orderMigration->down();
         $this->assertFalse(Schema::hasTable('orders'));
         $this->assertFalse(Schema::hasTable('order_items'));
         $this->assertFalse(Schema::hasTable('order_status_histories'));
+        $this->assertFalse(Schema::hasTable('return_inspections'));
         $this->assertFalse(Schema::hasColumn('inventory_transactions', 'order_item_id'));
+        $this->assertFalse(Schema::hasColumn('inventory_transactions', 'return_inspection_id'));
         foreach (['users', 'products', 'payment_attempts', 'inventory_transactions'] as $table) {
             $this->assertTrue(Schema::hasTable($table));
         }
 
         $orderMigration->up();
         $itemMigration->up();
+        $inspectionMigration->up();
         $historyMigration->up();
         $usageMigration->up();
         $this->assertTrue(Schema::hasTable('orders'));
         $this->assertTrue(Schema::hasTable('order_items'));
         $this->assertTrue(Schema::hasTable('order_status_histories'));
         $this->assertTrue(Schema::hasTable('coupon_usages'));
+        $this->assertTrue(Schema::hasTable('return_inspections'));
         $this->assertTrue(Schema::hasColumn('inventory_transactions', 'order_item_id'));
+        $this->assertTrue(Schema::hasColumn('inventory_transactions', 'return_inspection_id'));
     }
 
     public function test_cod_fingerprint_migration_guards_partial_state_and_round_trips_with_historical_vnpay_order(): void
