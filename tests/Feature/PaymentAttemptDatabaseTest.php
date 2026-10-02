@@ -23,7 +23,7 @@ class PaymentAttemptDatabaseTest extends TestCase
         $reservation = StockReservation::factory()->for($attempt)->create();
 
         $this->assertTrue(Schema::hasColumns('payment_attempts', [
-            'id', 'user_id', 'shipping_rate_id', 'request_key', 'gateway_reference',
+            'id', 'user_id', 'shipping_rate_id', 'request_key', 'gateway_reference', 'initiated_ip_address',
             'gateway_transaction_id', 'status', 'amount_vnd', 'items_snapshot_json',
             'recipient_snapshot_json', 'pricing_snapshot_json', 'shipping_fee_vnd',
             'coupon_id', 'expires_at', 'verified_at', 'gateway_result_code',
@@ -36,6 +36,7 @@ class PaymentAttemptDatabaseTest extends TestCase
         $this->assertSame(PaymentStatus::Unpaid, $attempt->status);
         $this->assertIsArray($attempt->items_snapshot_json);
         $this->assertFalse($attempt->late_callback_exception);
+        $this->assertNull($attempt->initiated_ip_address);
         $this->assertSame(['*'], $attempt->getGuarded());
         $this->assertSame(['*'], $reservation->getGuarded());
         $this->assertTrue($attempt->user->paymentAttempts->contains($attempt));
@@ -184,5 +185,29 @@ class PaymentAttemptDatabaseTest extends TestCase
         $this->assertTrue(Schema::hasTable('orders'));
         $this->assertDatabaseCount('orders', 0);
         $this->assertFalse(class_exists(ConsumeStockReservations::class));
+    }
+
+    public function test_initiation_ip_migration_preserves_legacy_rows_and_refuses_evidence_loss(): void
+    {
+        $legacy = PaymentAttempt::factory()->create(['initiated_ip_address' => null]);
+        $migration = require database_path('migrations/2026_10_02_000000_add_initiated_ip_address_to_payment_attempts_table.php');
+
+        try {
+            $migration->up();
+            $this->fail('Migration accepted an already-added destination column.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('partial state', $exception->getMessage());
+        }
+
+        $migration->down();
+        $this->assertFalse(Schema::hasColumn('payment_attempts', 'initiated_ip_address'));
+        $this->assertDatabaseHas('payment_attempts', ['id' => $legacy->id]);
+
+        $migration->up();
+        $this->assertNull(DB::table('payment_attempts')->where('id', $legacy->id)->value('initiated_ip_address'));
+        DB::table('payment_attempts')->where('id', $legacy->id)->update(['initiated_ip_address' => '203.0.113.10']);
+
+        $this->expectException(RuntimeException::class);
+        $migration->down();
     }
 }

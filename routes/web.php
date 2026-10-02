@@ -24,6 +24,8 @@ Route::get('/', function () {
 
 Route::get('/products', [CatalogController::class, 'index'])->name('products.index');
 Route::get('/products/{product}', [CatalogController::class, 'show'])->name('products.show');
+Route::get('/checkout/vnpay/return', [CheckoutController::class, 'vnpayReturn'])
+    ->name('checkout.vnpay.return');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -46,6 +48,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', [CheckoutController::class, 'show'])->name('show');
         Route::post('/quote', [CheckoutController::class, 'quote'])->name('quote');
         Route::post('/cod', [CheckoutController::class, 'storeCod'])->name('cod.store');
+        Route::post('/vnpay', [CheckoutController::class, 'initiateVnPay'])->name('vnpay.initiate');
     });
 
     Route::middleware('role:customer')->prefix('orders')->name('orders.')->group(function () {

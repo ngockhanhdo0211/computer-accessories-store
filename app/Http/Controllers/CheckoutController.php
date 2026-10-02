@@ -6,10 +6,14 @@ use App\Actions\BuildCheckoutQuote;
 use App\Actions\BuildCodOrderFingerprint;
 use App\Actions\CreateCodOrder;
 use App\Actions\GetCartSummary;
+use App\Actions\InitiateVnPayPayment;
+use App\Exceptions\VnPayGatewayException;
 use App\Http\Requests\CheckoutQuoteRequest;
+use App\Http\Requests\InitiateVnPayPaymentRequest;
 use App\Http\Requests\StoreCodOrderRequest;
 use App\Models\Coupon;
 use App\Models\Order;
+use App\Services\VnPayGateway;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +22,7 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
-    public function show(Request $request, GetCartSummary $summary): View|RedirectResponse
+    public function show(Request $request, GetCartSummary $summary, VnPayGateway $vnpay): View|RedirectResponse
     {
         $cart = $summary->handle($request->user());
         $request->attributes->set('cartItemCount', $cart['line_count']);
@@ -33,6 +37,8 @@ class CheckoutController extends Controller
             'cart' => $cart,
             'quote' => null,
             'requestKey' => $this->requestKey($request),
+            'vnpayRequestKey' => (string) Str::uuid(),
+            'vnpayAvailable' => $vnpay->isConfigured(),
             'form' => [
                 'recipient_name' => $request->user()->name,
                 'recipient_email' => $request->user()->email,
@@ -50,6 +56,7 @@ class CheckoutController extends Controller
         CheckoutQuoteRequest $request,
         BuildCheckoutQuote $action,
         BuildCodOrderFingerprint $fingerprints,
+        VnPayGateway $vnpay,
     ): View|RedirectResponse {
         try {
             $quote = $action->handle(
@@ -76,8 +83,38 @@ class CheckoutController extends Controller
             'cart' => null,
             'quote' => $quote,
             'requestKey' => $requestKey,
+            'vnpayRequestKey' => (string) Str::uuid(),
+            'vnpayAvailable' => $vnpay->isConfigured(),
             'form' => $request->quoteInput(),
         ]);
+    }
+
+    public function initiateVnPay(
+        InitiateVnPayPaymentRequest $request,
+        InitiateVnPayPayment $action,
+    ): RedirectResponse {
+        try {
+            $initiation = $action->handle(
+                $request->user(),
+                $request->recipient(),
+                $request->requestKey(),
+                $request->couponCode(),
+                (string) $request->ip(),
+            );
+        } catch (ValidationException $exception) {
+            return redirect()->route('checkout.show')->withErrors($exception->errors(), 'vnpay');
+        } catch (VnPayGatewayException) {
+            return redirect()->route('checkout.show')->withErrors([
+                'payment_method' => 'Dịch vụ VNPay tạm thời chưa khả dụng. Vui lòng thử lại sau hoặc chọn COD.',
+            ], 'vnpay');
+        }
+
+        return redirect()->away($initiation->paymentUrl);
+    }
+
+    public function vnpayReturn(): View
+    {
+        return view('checkout.vnpay-return');
     }
 
     public function storeCod(StoreCodOrderRequest $request, CreateCodOrder $action): RedirectResponse

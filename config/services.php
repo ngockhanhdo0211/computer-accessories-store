@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'vnpay' => [
+        'payment_url' => env('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
+        'terminal_code' => env('VNPAY_TERMINAL_CODE'),
+        'hash_secret' => env('VNPAY_HASH_SECRET'),
+        'return_url' => env('VNPAY_RETURN_URL'),
+        'version' => env('VNPAY_VERSION', '2.1.0'),
+        'timezone' => env('VNPAY_TIMEZONE', 'Asia/Ho_Chi_Minh'),
+    ],
+
 ];

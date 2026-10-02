@@ -22,9 +22,9 @@ class PaymentAttempt extends Model
     protected static function booted(): void
     {
         static::updating(function (PaymentAttempt $attempt): void {
-            $immutable = ['user_id', 'shipping_rate_id', 'request_key', 'gateway_reference', 'amount_vnd',
+            $immutable = ['user_id', 'shipping_rate_id', 'request_key', 'gateway_reference', 'initiated_ip_address', 'amount_vnd',
                 'items_snapshot_json', 'recipient_snapshot_json', 'pricing_snapshot_json', 'shipping_fee_vnd',
-                'coupon_id', 'expires_at'];
+                'coupon_id', 'expires_at', 'created_at'];
 
             if ($attempt->isDirty($immutable)) {
                 throw new \LogicException('Payment Attempt identity and checkout snapshots are immutable.');

@@ -43,11 +43,22 @@
         </section>
     @endif
 
+    @if ($errors->vnpay->any())
+        <section class="alert alert--error checkout-validation-summary" role="alert" tabindex="-1" aria-labelledby="vnpay-errors-title">
+            <h2 id="vnpay-errors-title">Không thể khởi tạo thanh toán VNPay</h2>
+            <ul>
+                @foreach ($errors->vnpay->all() as $message)
+                    <li>{{ $message }}</li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     @if ($quote)
         <section class="checkout-quote-status" aria-labelledby="quote-status-title">
             <p class="section-label">Đã tính lúc {{ $quote->quotedAt->timezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y') }}</p>
             <h2 id="quote-status-title">Bảng tính tạm thời</h2>
-            <p>Đây chưa phải đơn hàng và chưa giữ tồn kho hoặc lượt dùng mã. Hệ thống sẽ xác minh lại toàn bộ dữ liệu khi bạn đặt hàng COD.</p>
+            <p>Đây chưa phải đơn hàng và chưa giữ tồn kho hoặc lượt dùng mã. Hệ thống sẽ xác minh lại dữ liệu khi bạn chọn COD hoặc khởi tạo VNPay.</p>
         </section>
     @endif
 
@@ -181,7 +192,14 @@
 
             @if ($quote)
                 <p class="checkout-summary__note">{{ $quote->shipping->regionLabel }} · Phí sau ưu đãi {{ number_format($quote->shippingFeeAfterDiscountVnd, 0, ',', '.') }} ₫.</p>
-                @include('checkout._cod-form')
+                <section class="checkout-payment-methods" aria-labelledby="payment-methods-title">
+                    <header>
+                        <p class="section-label">Phương thức thanh toán</p>
+                        <h3 id="payment-methods-title">Chọn cách thanh toán</h3>
+                    </header>
+                    @include('checkout._cod-form')
+                    @include('checkout._vnpay-form')
+                </section>
             @else
                 <p class="checkout-summary__note">Nhập thông tin nhận hàng để server xác định vùng phí và tạo bảng tính.</p>
             @endif

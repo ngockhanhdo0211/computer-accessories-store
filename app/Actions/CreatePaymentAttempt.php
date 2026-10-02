@@ -16,6 +16,7 @@ use App\ValueObjects\CheckoutRecipient;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -36,6 +37,7 @@ class CreatePaymentAttempt
         string $requestKey,
         ?string $couponCode = null,
         ?CarbonInterface $at = null,
+        ?string $initiatedIpAddress = null,
     ): PaymentAttempt {
         $this->assertActiveCustomer($user);
         $requestKey = trim($requestKey);
@@ -51,7 +53,7 @@ class CreatePaymentAttempt
         $createdAt = CarbonImmutable::instance($at ?? now())->utc();
         $initialProductIds = $this->cartProductIds($user);
 
-        return DB::transaction(function () use ($user, $recipient, $requestKey, $couponCode, $createdAt, $initialProductIds): PaymentAttempt {
+        return DB::transaction(function () use ($user, $recipient, $requestKey, $couponCode, $createdAt, $initialProductIds, $initiatedIpAddress): PaymentAttempt {
             $existing = $this->findExisting($user, $requestKey);
 
             $coupon = $couponCode === null ? null : Coupon::query()
@@ -101,12 +103,11 @@ class CreatePaymentAttempt
             }
 
             $expiresAt = $createdAt->addMinutes(self::RESERVATION_MINUTES);
-            $attempt = new PaymentAttempt;
-            $attempt->forceFill([
+            $attemptAttributes = [
                 'user_id' => $user->id,
                 'shipping_rate_id' => $quote->shipping->shippingRateId,
                 'request_key' => $requestKey,
-                'gateway_reference' => 'PA-'.Str::uuid(),
+                'initiated_ip_address' => $initiatedIpAddress,
                 'gateway_transaction_id' => null,
                 'status' => PaymentStatus::Unpaid,
                 'amount_vnd' => $quote->grandTotalVnd,
@@ -133,7 +134,23 @@ class CreatePaymentAttempt
                 'verified_at' => null,
                 'gateway_result_code' => null,
                 'late_callback_exception' => false,
-            ])->save();
+            ];
+
+            for ($referenceAttempt = 0; ; $referenceAttempt++) {
+                $attempt = new PaymentAttempt;
+                $attempt->forceFill(array_merge($attemptAttributes, [
+                    'gateway_reference' => 'PA'.strtoupper(str_replace('-', '', (string) Str::uuid())),
+                ]));
+
+                try {
+                    $attempt->save();
+                    break;
+                } catch (QueryException $exception) {
+                    if ($referenceAttempt >= 2 || ! $this->isGatewayReferenceDuplicate($exception)) {
+                        throw $exception;
+                    }
+                }
+            }
 
             foreach ($quote->lines as $line) {
                 $reservation = new StockReservation;
@@ -286,5 +303,13 @@ class CreatePaymentAttempt
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function isGatewayReferenceDuplicate(QueryException $exception): bool
+    {
+        $message = mb_strtolower($exception->getMessage());
+
+        return str_contains($message, 'payment_attempts_gateway_reference_unique')
+            || str_contains($message, 'payment_attempts.gateway_reference');
     }
 }
