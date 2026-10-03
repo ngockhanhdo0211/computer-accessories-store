@@ -533,6 +533,7 @@ class OrderPersistenceDatabaseTest extends TestCase
         $usageMigration = require database_path('migrations/2026_09_29_000003_create_coupon_usages_table.php');
         $inspectionMigration = require database_path('migrations/2026_10_01_000001_create_return_inspections_table.php');
         $terminalMigration = require database_path('migrations/2026_10_01_000002_enable_cod_terminal_lifecycle.php');
+        $callbackMigration = require database_path('migrations/2026_10_03_000000_enable_vnpay_callback_finalization.php');
 
         foreach ([$orderMigration, $itemMigration, $historyMigration, $usageMigration, $inspectionMigration] as $migration) {
             try {
@@ -543,6 +544,7 @@ class OrderPersistenceDatabaseTest extends TestCase
             }
         }
 
+        $callbackMigration->down();
         $terminalMigration->down();
         $usageMigration->down();
         $historyMigration->down();
@@ -565,11 +567,13 @@ class OrderPersistenceDatabaseTest extends TestCase
         $historyMigration->up();
         $usageMigration->up();
         $terminalMigration->up();
+        $callbackMigration->up();
         $this->assertTrue(Schema::hasTable('orders'));
         $this->assertTrue(Schema::hasTable('order_items'));
         $this->assertTrue(Schema::hasTable('order_status_histories'));
         $this->assertTrue(Schema::hasTable('coupon_usages'));
         $this->assertTrue(Schema::hasTable('return_inspections'));
+        $this->assertTrue(Schema::hasTable('refunds'));
         $this->assertTrue(Schema::hasColumn('inventory_transactions', 'order_item_id'));
         $this->assertTrue(Schema::hasColumn('inventory_transactions', 'return_inspection_id'));
     }
@@ -616,10 +620,15 @@ class OrderPersistenceDatabaseTest extends TestCase
     private function verifiedAttempt(array $attributes = []): PaymentAttempt
     {
         $attempt = PaymentAttempt::factory()->create($attributes);
-        $attempt->forceFill([
+        $attempt->finalizeCallback([
             'status' => PaymentStatus::Paid,
+            'gateway_transaction_id' => 'TX-'.str_replace('-', '', (string) Str::uuid()),
+            'gateway_result_code' => '00',
+            'gateway_transaction_status' => '00',
+            'gateway_paid_at' => now(),
+            'callback_fingerprint' => hash('sha256', (string) Str::uuid()),
             'verified_at' => now(),
-        ])->save();
+        ]);
 
         return $attempt->fresh();
     }

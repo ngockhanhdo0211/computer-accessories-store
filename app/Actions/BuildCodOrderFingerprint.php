@@ -2,7 +2,6 @@
 
 namespace App\Actions;
 
-use App\Enums\CouponScope;
 use App\Enums\PaymentMethod;
 use App\Models\Coupon;
 use App\Models\User;
@@ -13,12 +12,14 @@ use JsonException;
 
 class BuildCodOrderFingerprint
 {
+    public function __construct(private readonly ?AllocateCheckoutDiscounts $discounts = null) {}
+
     /**
      * @return array{fingerprint:string, discounts:array<int, int>, coupon_snapshot:array<string, mixed>|null}
      */
     public function handle(User $customer, string $requestKey, CheckoutQuote $quote, ?Coupon $coupon): array
     {
-        $discounts = $this->allocateDiscounts($quote, $coupon);
+        $discounts = ($this->discounts ?? new AllocateCheckoutDiscounts)->handle($quote, $coupon);
         $lines = collect($quote->lines)
             ->sortBy(fn (CheckoutQuoteLine $line): int => $line->productId)
             ->values()
@@ -105,104 +106,6 @@ class BuildCodOrderFingerprint
             'target_ids' => $targetIds,
             'eligible_subtotal_vnd' => $quote->coupon->eligibleSubtotalVnd,
         ];
-    }
-
-    /** @return array<int, int> */
-    private function allocateDiscounts(CheckoutQuote $quote, ?Coupon $coupon): array
-    {
-        $lines = collect($quote->lines)->sortBy(fn (CheckoutQuoteLine $line): int => $line->productId)->values();
-        $discounts = $lines->mapWithKeys(fn (CheckoutQuoteLine $line): array => [$line->productId => 0])->all();
-
-        if ($quote->productDiscountVnd === 0) {
-            return $discounts;
-        }
-
-        if ($coupon === null || $quote->coupon?->couponId !== $coupon->id) {
-            throw ValidationException::withMessages(['coupon_code' => 'Snapshot mã giảm giá không khớp định nghĩa hiện tại.']);
-        }
-
-        $targets = array_fill_keys($coupon->targetIds(), true);
-        $eligible = $lines->filter(function (CheckoutQuoteLine $line) use ($coupon, $targets): bool {
-            return match ($coupon->scope) {
-                CouponScope::Cart => true,
-                CouponScope::Product => isset($targets[$line->productId]),
-                CouponScope::Category => isset($targets[$line->categoryId]),
-                CouponScope::Brand => isset($targets[$line->brandId]),
-            };
-        })->values();
-
-        if ($eligible->sum('lineSubtotalVnd') !== $quote->coupon->eligibleSubtotalVnd) {
-            throw ValidationException::withMessages(['coupon_code' => 'Phạm vi mã giảm giá vừa thay đổi. Vui lòng tạo lại báo giá.']);
-        }
-
-        $remainders = [];
-        foreach ($eligible as $line) {
-            [$base, $remainder] = $this->multiplyAndDivide(
-                $quote->productDiscountVnd,
-                $line->lineSubtotalVnd,
-                $quote->coupon->eligibleSubtotalVnd,
-            );
-            $discounts[$line->productId] = $base;
-            $remainders[] = ['product_id' => $line->productId, 'remainder' => $remainder];
-        }
-
-        $remaining = $quote->productDiscountVnd - array_sum($discounts);
-        usort($remainders, fn (array $left, array $right): int => $right['remainder'] <=> $left['remainder'] ?: $left['product_id'] <=> $right['product_id']);
-
-        for ($index = 0; $index < $remaining; $index++) {
-            $discounts[$remainders[$index]['product_id']]++;
-        }
-
-        return $discounts;
-    }
-
-    /** @return array{int, int} */
-    private function multiplyAndDivide(int $left, int $right, int $divisor): array
-    {
-        if ($left < 0 || $right < 0 || $divisor < 1) {
-            throw ValidationException::withMessages(['cart' => 'Không thể phân bổ giảm giá từ giá trị không hợp lệ.']);
-        }
-
-        $quotient = 0;
-        $remainder = 0;
-        $addQuotient = intdiv($right, $divisor);
-        $addRemainder = $right % $divisor;
-
-        while ($left > 0) {
-            if (($left & 1) === 1) {
-                [$quotient, $remainder] = $this->addFraction(
-                    $quotient,
-                    $remainder,
-                    $addQuotient,
-                    $addRemainder,
-                    $divisor,
-                );
-            }
-
-            $left = intdiv($left, 2);
-            if ($left > 0) {
-                [$addQuotient, $addRemainder] = $this->addFraction(
-                    $addQuotient,
-                    $addRemainder,
-                    $addQuotient,
-                    $addRemainder,
-                    $divisor,
-                );
-            }
-        }
-
-        return [$quotient, $remainder];
-    }
-
-    /** @return array{int, int} */
-    private function addFraction(int $quotient, int $remainder, int $otherQuotient, int $otherRemainder, int $divisor): array
-    {
-        $quotient += $otherQuotient;
-        if ($remainder >= $divisor - $otherRemainder) {
-            return [$quotient + 1, $remainder - ($divisor - $otherRemainder)];
-        }
-
-        return [$quotient, $remainder + $otherRemainder];
     }
 
     private function canonicalize(mixed $value): mixed

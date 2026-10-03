@@ -66,6 +66,10 @@ class PaymentAttemptFactory extends Factory
             'expires_at' => now()->addMinutes(15),
             'verified_at' => null,
             'gateway_result_code' => null,
+            'gateway_transaction_status' => null,
+            'gateway_paid_at' => null,
+            'gateway_bank_code' => null,
+            'callback_fingerprint' => null,
             'late_callback_exception' => false,
         ];
     }

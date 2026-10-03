@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\VnPayGateway;
 use App\ValueObjects\CheckoutRecipient;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -192,14 +193,11 @@ class VnPayPaymentInitiationTest extends TestCase
         [$corruptCustomer] = $this->customerWithCart();
         $corruptKey = (string) Str::uuid();
         $corrupt = app(CreatePaymentAttempt::class)->handle($corruptCustomer, $this->recipient(), $corruptKey);
-        DB::table('payment_attempts')->where('id', $corrupt->id)->update(['gateway_result_code' => '00']);
-
         try {
-            app(InitiateVnPayPayment::class)->handle($corruptCustomer, $this->recipient(), $corruptKey, null, '203.0.113.10');
-            $this->fail('Attempt with prior gateway evidence and missing IP was accepted.');
-        } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('request_key', $exception->errors());
-            $this->assertNull($corrupt->fresh()->initiated_ip_address);
+            DB::table('payment_attempts')->where('id', $corrupt->id)->update(['gateway_result_code' => '00']);
+            $this->fail('Database accepted partial callback evidence on an unpaid attempt.');
+        } catch (QueryException) {
+            $this->assertNull($corrupt->fresh()->gateway_result_code);
         }
 
         [$rollbackCustomer] = $this->customerWithCart();
@@ -273,7 +271,17 @@ class VnPayPaymentInitiationTest extends TestCase
             [$terminalCustomer] = $this->customerWithCart();
             $terminalKey = (string) Str::uuid();
             app(InitiateVnPayPayment::class)->handle($terminalCustomer, $this->recipient(), $terminalKey, null, '203.0.113.10');
-            DB::table('payment_attempts')->where('request_key', $terminalKey)->update(['status' => $status->value]);
+            $evidence = [
+                'status' => $status->value,
+                'gateway_transaction_id' => $status === PaymentStatus::Failed ? null : 'TXN-'.$terminalCustomer->id,
+                'gateway_result_code' => $status === PaymentStatus::Failed ? '24' : '00',
+                'gateway_transaction_status' => $status === PaymentStatus::Failed ? '02' : '00',
+                'gateway_paid_at' => now(),
+                'gateway_bank_code' => 'NCB',
+                'callback_fingerprint' => hash('sha256', 'terminal-'.$terminalCustomer->id),
+                'verified_at' => now(),
+            ];
+            DB::table('payment_attempts')->where('request_key', $terminalKey)->update($evidence);
             try {
                 app(InitiateVnPayPayment::class)->handle($terminalCustomer, $this->recipient(), $terminalKey, null, '203.0.113.10');
                 $this->fail("{$status->value} attempt generated a new URL.");
@@ -350,7 +358,7 @@ class VnPayPaymentInitiationTest extends TestCase
             ->assertDontSee('test-secret-never-rendered');
     }
 
-    public function test_routes_authorization_validation_return_page_and_no_ipn_are_safe(): void
+    public function test_routes_authorization_validation_return_page_and_public_ipn_are_safe(): void
     {
         $key = (string) Str::uuid();
         $this->post(route('checkout.vnpay.initiate'), $this->payload($key))->assertRedirect(route('login'));
@@ -380,8 +388,10 @@ class VnPayPaymentInitiationTest extends TestCase
         $routes = collect(app('router')->getRoutes()->getRoutes());
         $initiate = $routes->firstWhere('action.as', 'checkout.vnpay.initiate');
         $return = $routes->firstWhere('action.as', 'checkout.vnpay.return');
+        $ipn = $routes->firstWhere('action.as', 'checkout.vnpay.ipn');
         $this->assertSame(['POST'], $initiate->methods());
         $this->assertSame(['GET', 'HEAD'], $return->methods());
-        $this->assertNull($routes->first(fn ($route) => str_contains(strtolower($route->uri()), 'ipn')));
+        $this->assertSame(['GET', 'HEAD'], $ipn->methods());
+        $this->assertSame(['web'], $ipn->gatherMiddleware());
     }
 }

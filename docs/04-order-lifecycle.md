@@ -20,7 +20,7 @@ da_dat ────────────────> cho_chuyen_phat ──�
 
 `da_giao` và `da_huy` là trạng thái kết thúc. Cấm nhảy bước, đưa đơn đã giao về trạng thái cũ, tự ý khôi phục đơn đã hủy hoặc xóa đơn. Mỗi lần đổi trạng thái lưu trạng thái cũ, mới, người thực hiện, thời gian và ghi chú/lý do. Trạng thái đơn không được dùng thay trạng thái thanh toán.
 
-**Trạng thái triển khai hiện tại:** Order Transit Progression Phase 1 cho Admin/Employee thực hiện `da_dat → cho_chuyen_phat` và `cho_chuyen_phat → dang_trung_chuyen`. COD Order Terminal Lifecycle bổ sung `dang_trung_chuyen → da_giao` cho Admin/Employee và các cạnh đến `da_huy` cho Admin/Employee trước trung chuyển hoặc chỉ Admin khi đang trung chuyển. Mỗi thao tác dùng event key, khóa theo thứ tự ổn định và ghi History/Audit trong cùng transaction. Customer cancel, VNPay terminal lifecycle và Refund vẫn chưa triển khai.
+**Trạng thái triển khai hiện tại:** Order Transit Progression Phase 1 và COD Order Terminal Lifecycle đã mở các cạnh COD đã chốt. VNPay Callback/IPN đã tạo Order `da_dat` hoặc Refund `pending` nguyên tử sau khi xác minh; Refund hiện mới có persistence và nhánh tạo pending, chưa gọi Refund API hay chuyển succeeded/failed. Customer cancel và VNPay Order terminal lifecycle vẫn chưa triển khai.
 
 **Return Inspection Foundation:** Đã có chứng từ hai giai đoạn theo từng Order Item. Employee/Admin active được tiếp nhận và hoàn tất kiểm tra ở `da_dat`/`cho_chuyen_phat`; chỉ Admin active được thao tác ở `dang_trung_chuyen`. Foundation chỉ ghi bằng chứng và audit, chưa đổi Order sang `da_huy`, chưa hoàn kho hay tạo inventory transaction.
 
@@ -36,9 +36,9 @@ da_dat ────────────────> cho_chuyen_phat ──�
 
 ## Nhánh thanh toán VNPay
 
-Luồng thanh toán có trạng thái riêng: `chua_thanh_toan`, `da_thanh_toan`, `that_bai`, `hoan_tien`. Trước khi chuyển VNPay, tạo `payment_attempt` và `stock_reservation` giữ hàng 15 phút; chưa tạo order. Tồn khả dụng trừ reservation còn hiệu lực. Callback phải xác minh chữ ký, số tiền, mã giao dịch và idempotent. Thành công khi reservation còn hiệu lực: tạo đúng một order `da_dat`, chuyển giữ hàng thành sale, tiêu thụ mã và xóa giỏ trong transaction. Thất bại/hết hạn giải phóng reservation; thất bại không trừ kho, xóa giỏ hay tiêu thụ mã.
+Luồng thanh toán có trạng thái riêng: `chua_thanh_toan`, `da_thanh_toan`, `that_bai`, `hoan_tien`. Trước khi chuyển VNPay, tạo `payment_attempt` và `stock_reservation` giữ hàng 15 phút; chưa tạo order. Discount từng line được phân bổ và snapshot ngay lúc initiation. Callback xác minh raw query, chữ ký, merchant, reference, amount và transaction number; thành công trong hạn tạo đúng một order `da_dat`, chuyển giữ hàng thành sale, tiêu thụ mã và chỉ xóa Cart line còn khớp snapshot trong cùng transaction. Callback giống hệt trả duplicate; callback xung đột không ghi đè evidence.
 
-Callback thành công **sau khi reservation hết hạn**: kiểm tra lại tồn khả dụng trong transaction. Nếu đủ, tạo một order `da_dat`, xuất kho đúng một lần và xử lý coupon/giỏ khi xác lập order. Nếu thiếu, không tạo order; vẫn lưu payment thành công và tạo full refund `pending` liên kết `payment_attempt`. Không tiêu thụ coupon hay xóa giỏ khi không có order. Callback lặp không tạo order, xuất kho hoặc refund thứ hai.
+Callback thành công **sau khi reservation hết hạn**: kiểm tra lại tồn khả dụng và Coupon capacity trong transaction. Nếu đủ cả hai, tạo một order `da_dat`, xuất kho đúng một lần và consume chính usage đã released. Nếu thiếu một trong hai, không tạo order; vẫn lưu payment thành công và tạo đúng một full refund `pending`. Attempt lịch sử nhiều line có item discount nhưng thiếu phân bổ cũng đi Refund `snapshot_incomplete`; snapshot corruption rollback và trả mã retryable `99`. Không tiêu thụ coupon hay xóa giỏ khi không có order. Callback lặp không tạo order, sale hoặc refund thứ hai.
 
 ## Màn hình vận hành
 

@@ -16,6 +16,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ManagedOrderController;
+use App\Http\Controllers\VnPayIpnController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -26,6 +27,8 @@ Route::get('/products', [CatalogController::class, 'index'])->name('products.ind
 Route::get('/products/{product}', [CatalogController::class, 'show'])->name('products.show');
 Route::get('/checkout/vnpay/return', [CheckoutController::class, 'vnpayReturn'])
     ->name('checkout.vnpay.return');
+Route::get('/checkout/vnpay/ipn', VnPayIpnController::class)
+    ->name('checkout.vnpay.ipn');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');

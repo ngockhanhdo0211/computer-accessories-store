@@ -121,6 +121,10 @@ class ManagedOrderReadOnlyTest extends TestCase
             'status' => PaymentStatus::Paid,
             'verified_at' => now(),
             'gateway_transaction_id' => 'VNP-REAL-TRANSACTION',
+            'gateway_result_code' => '00',
+            'gateway_transaction_status' => '00',
+            'gateway_paid_at' => now(),
+            'callback_fingerprint' => hash('sha256', 'managed-order-fixture'),
         ]);
         $order = Order::factory()->forVerifiedAttempt($attempt)->create();
 

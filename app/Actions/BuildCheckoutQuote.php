@@ -107,6 +107,8 @@ class BuildCheckoutQuote
                 $cartItem->quantity,
                 $unitPrice,
                 $lineSubtotal,
+                $cartItem->id,
+                $cartItem->updated_at->clone()->utc()->format('Y-m-d\TH:i:s.u\Z'),
             );
             $couponLines[] = [
                 'product_id' => $product->id,

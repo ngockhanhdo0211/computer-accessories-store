@@ -55,7 +55,15 @@ class MariaDbCouponUsageConcurrencyTest extends TestCase
 
     private function paidOrder($attempt): Order
     {
-        $attempt->forceFill(['status' => PaymentStatus::Paid, 'verified_at' => now()])->save();
+        $attempt->finalizeCallback([
+            'status' => PaymentStatus::Paid,
+            'gateway_transaction_id' => 'TX-'.str_replace('-', '', (string) Str::uuid()),
+            'gateway_result_code' => '00',
+            'gateway_transaction_status' => '00',
+            'gateway_paid_at' => now(),
+            'callback_fingerprint' => hash('sha256', (string) Str::uuid()),
+            'verified_at' => now(),
+        ]);
 
         return Order::factory()->forVerifiedAttempt($attempt)->create(['coupon_snapshot_json' => $attempt->pricing_snapshot_json['coupon']]);
     }

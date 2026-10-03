@@ -2,6 +2,8 @@
 
 namespace App\ValueObjects;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 
 final readonly class OrderSnapshot
@@ -150,12 +152,18 @@ final readonly class OrderSnapshot
             throw new InvalidArgumentException('Payment Attempt item snapshot must be a non-empty list.');
         }
 
-        $expectedKeys = [
+        $legacyKeys = [
             'brand_id', 'category_id', 'line_subtotal_vnd', 'product_id',
             'product_name', 'quantity', 'sku', 'unit_price_vnd',
         ];
+        $currentKeys = [
+            'brand_id', 'cart_item_id', 'cart_item_updated_at', 'category_id', 'discount_vnd',
+            'line_total_vnd', 'product_id', 'product_name', 'quantity', 'sku', 'subtotal_vnd',
+            'unit_price_vnd',
+        ];
         $lines = [];
         $productIds = [];
+        $cartItemIds = [];
 
         foreach ($snapshot as $line) {
             if (! is_array($line)) {
@@ -165,7 +173,11 @@ final readonly class OrderSnapshot
             $actualKeys = array_keys($line);
             sort($actualKeys, SORT_STRING);
 
-            if ($actualKeys !== $expectedKeys
+            $current = $actualKeys === $currentKeys;
+            $legacy = $actualKeys === $legacyKeys;
+            $subtotal = $current ? ($line['subtotal_vnd'] ?? null) : ($line['line_subtotal_vnd'] ?? null);
+
+            if ((! $current && ! $legacy)
                 || ! is_int($line['product_id'])
                 || ! is_int($line['category_id'])
                 || ! is_int($line['brand_id'])
@@ -173,9 +185,17 @@ final readonly class OrderSnapshot
                 || ! is_string($line['product_name'])
                 || ! is_int($line['quantity'])
                 || ! is_int($line['unit_price_vnd'])
-                || ! is_int($line['line_subtotal_vnd'])
+                || ! is_int($subtotal)
                 || ! mb_check_encoding($line['sku'], 'UTF-8')
                 || ! mb_check_encoding($line['product_name'], 'UTF-8')
+                || ($current && (! is_int($line['cart_item_id'])
+                    || ! is_string($line['cart_item_updated_at'])
+                    || $line['cart_item_id'] < 1
+                    || ! self::isUtcMicrosecondTimestamp($line['cart_item_updated_at'])
+                    || ! is_int($line['discount_vnd'])
+                    || ! is_int($line['line_total_vnd'])
+                    || $line['discount_vnd'] < 0 || $line['discount_vnd'] > $subtotal
+                    || $line['line_total_vnd'] !== $subtotal - $line['discount_vnd']))
                 || isset($productIds[$line['product_id']])) {
                 throw new InvalidArgumentException('Payment Attempt item snapshot shape is invalid.');
             }
@@ -188,23 +208,43 @@ final readonly class OrderSnapshot
                 $line['product_name'],
                 $line['quantity'],
                 $line['unit_price_vnd'],
-                $line['line_subtotal_vnd'],
+                $subtotal,
             );
 
+            if ($current && isset($cartItemIds[$line['cart_item_id']])) {
+                throw new InvalidArgumentException('Payment Attempt Cart identity must be unique.');
+            }
+
             $productIds[$line['product_id']] = true;
+            if ($current) {
+                $cartItemIds[$line['cart_item_id']] = true;
+            }
             $lines[] = [
                 'product_id' => $line['product_id'],
                 'product_name' => $line['product_name'],
                 'sku' => $line['sku'],
                 'quantity' => $line['quantity'],
                 'unit_price_vnd' => $line['unit_price_vnd'],
-                'line_subtotal_vnd' => $line['line_subtotal_vnd'],
+                'line_subtotal_vnd' => $subtotal,
             ];
         }
 
         usort($lines, fn (array $left, array $right): int => $left['product_id'] <=> $right['product_id']);
 
         return $lines;
+    }
+
+    private static function isUtcMicrosecondTimestamp(string $value): bool
+    {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/D', $value) !== 1) {
+            return false;
+        }
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i:s.u\Z', $value, new DateTimeZone('UTC'));
+        $errors = DateTimeImmutable::getLastErrors();
+
+        return $date !== false
+            && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0))
+            && $date->format('Y-m-d\TH:i:s.u\Z') === $value;
     }
 
     /** @param array<string, mixed> $shipping */

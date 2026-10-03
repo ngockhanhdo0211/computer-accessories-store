@@ -58,6 +58,10 @@ class InitiateVnPayPayment
         $isPristine = $attempt->status === PaymentStatus::Unpaid
             && $attempt->gateway_transaction_id === null
             && $attempt->gateway_result_code === null
+            && $attempt->gateway_transaction_status === null
+            && $attempt->gateway_paid_at === null
+            && $attempt->gateway_bank_code === null
+            && $attempt->callback_fingerprint === null
             && $attempt->verified_at === null
             && ! $attempt->late_callback_exception
             && preg_match('/^PA[A-F0-9]{32}$/D', $attempt->gateway_reference) === 1

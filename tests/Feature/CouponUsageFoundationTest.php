@@ -52,7 +52,7 @@ class CouponUsageFoundationTest extends TestCase
 
     private function paidOrder(PaymentAttempt $attempt): Order
     {
-        $attempt->forceFill(['status' => PaymentStatus::Paid, 'verified_at' => now()])->save();
+        $attempt->finalizeCallback($this->paidEvidence());
 
         return Order::factory()->forVerifiedAttempt($attempt)->create([
             'coupon_snapshot_json' => $attempt->pricing_snapshot_json['coupon'],
@@ -262,7 +262,7 @@ class CouponUsageFoundationTest extends TestCase
     {
         $mismatchCoupon = Coupon::factory()->create();
         $mismatchAttempt = $this->attempt($this->customerWithCart(), $mismatchCoupon);
-        $mismatchAttempt->forceFill(['status' => PaymentStatus::Paid, 'verified_at' => now()])->save();
+        $mismatchAttempt->finalizeCallback($this->paidEvidence());
         $mismatchSnapshot = $mismatchAttempt->pricing_snapshot_json['coupon'];
         $mismatchSnapshot['code'] = 'DIFFERENT-SNAPSHOT';
         $mismatchOrder = Order::factory()->forVerifiedAttempt($mismatchAttempt)->create([
@@ -328,5 +328,18 @@ class CouponUsageFoundationTest extends TestCase
         $this->assertNull($blocked->order_id);
         $this->assertNull($blocked->consumed_at);
         $this->assertFalse($blocked->late_callback_exception);
+    }
+
+    private function paidEvidence(): array
+    {
+        return [
+            'status' => PaymentStatus::Paid,
+            'gateway_transaction_id' => 'TX-'.str_replace('-', '', (string) Str::uuid()),
+            'gateway_result_code' => '00',
+            'gateway_transaction_status' => '00',
+            'gateway_paid_at' => now(),
+            'callback_fingerprint' => hash('sha256', (string) Str::uuid()),
+            'verified_at' => now(),
+        ];
     }
 }

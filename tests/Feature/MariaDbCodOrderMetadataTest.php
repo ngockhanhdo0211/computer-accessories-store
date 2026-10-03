@@ -40,6 +40,10 @@ class MariaDbCodOrderMetadataTest extends TestCase
             'status' => PaymentStatus::Paid,
             'verified_at' => now(),
             'gateway_transaction_id' => 'TX-'.Str::uuid(),
+            'gateway_result_code' => '00',
+            'gateway_transaction_status' => '00',
+            'gateway_paid_at' => now(),
+            'callback_fingerprint' => hash('sha256', (string) Str::uuid()),
         ]);
         $this->assertSqlRejected(fn () => DB::table('orders')
             ->where('id', $order->id)

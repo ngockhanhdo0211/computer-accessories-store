@@ -27,7 +27,12 @@ class PaymentAttemptDatabaseTest extends TestCase
             'gateway_transaction_id', 'status', 'amount_vnd', 'items_snapshot_json',
             'recipient_snapshot_json', 'pricing_snapshot_json', 'shipping_fee_vnd',
             'coupon_id', 'expires_at', 'verified_at', 'gateway_result_code',
+            'gateway_transaction_status', 'gateway_paid_at', 'gateway_bank_code', 'callback_fingerprint',
             'late_callback_exception', 'created_at', 'updated_at',
+        ]));
+        $this->assertTrue(Schema::hasColumns('refunds', [
+            'payment_attempt_id', 'order_id', 'amount_vnd', 'reason', 'status',
+            'gateway_refund_reference', 'note', 'created_at', 'updated_at',
         ]));
         $this->assertTrue(Schema::hasColumns('stock_reservations', [
             'id', 'payment_attempt_id', 'product_id', 'quantity', 'expires_at',
@@ -79,9 +84,25 @@ class PaymentAttemptDatabaseTest extends TestCase
             }
         }
 
-        $attempt->forceFill(['gateway_transaction_id' => 'VNPAY-UNIQUE'])->save();
+        DB::table('payment_attempts')->where('id', $attempt->id)->update([
+            'status' => PaymentStatus::Paid->value,
+            'gateway_transaction_id' => 'VNPAY-UNIQUE',
+            'gateway_result_code' => '00',
+            'gateway_transaction_status' => '00',
+            'gateway_paid_at' => now(),
+            'callback_fingerprint' => hash('sha256', 'first'),
+            'verified_at' => now(),
+        ]);
         $this->expectException(QueryException::class);
-        PaymentAttempt::factory()->create(['gateway_transaction_id' => 'VNPAY-UNIQUE']);
+        PaymentAttempt::factory()->create([
+            'status' => PaymentStatus::Paid,
+            'gateway_transaction_id' => 'VNPAY-UNIQUE',
+            'gateway_result_code' => '00',
+            'gateway_transaction_status' => '00',
+            'gateway_paid_at' => now(),
+            'callback_fingerprint' => hash('sha256', 'second'),
+            'verified_at' => now(),
+        ]);
     }
 
     public function test_database_enforces_reservation_checks_unique_and_restricts_deletes(): void
@@ -162,7 +183,9 @@ class PaymentAttemptDatabaseTest extends TestCase
     {
         $attemptMigration = require database_path('migrations/2026_09_28_000000_create_payment_attempts_table.php');
         $reservationMigration = require database_path('migrations/2026_09_28_000001_create_stock_reservations_table.php');
+        $callbackMigration = require database_path('migrations/2026_10_03_000000_enable_vnpay_callback_finalization.php');
 
+        $callbackMigration->down();
         $reservationMigration->down();
         $attemptMigration->down();
         $this->assertFalse(Schema::hasTable('payment_attempts'));
@@ -173,10 +196,12 @@ class PaymentAttemptDatabaseTest extends TestCase
 
         $attemptMigration->up();
         $reservationMigration->up();
+        $callbackMigration->up();
         $this->assertTrue(Schema::hasTable('payment_attempts'));
         $this->assertTrue(Schema::hasTable('stock_reservations'));
         $this->assertDatabaseCount('payment_attempts', 0);
         $this->assertDatabaseCount('stock_reservations', 0);
+        $this->assertDatabaseCount('refunds', 0);
     }
 
     public function test_order_and_coupon_usage_persistence_exist_while_stock_consume_remains_absent(): void

@@ -29,6 +29,7 @@ class CreatePaymentAttempt
     public function __construct(
         private readonly BuildCheckoutQuote $quotes,
         private readonly ReserveCouponUsage $couponUsages,
+        private readonly AllocateCheckoutDiscounts $discounts,
     ) {}
 
     public function handle(
@@ -93,9 +94,11 @@ class CreatePaymentAttempt
             }
 
             $quote = $this->quotes->handle($user, $recipient, $couponCode, $createdAt, true);
+            $lineDiscounts = $this->discounts->handle($quote, $coupon);
+            $lineSnapshots = $this->attemptLineSnapshots($quote, $lineDiscounts);
 
             if ($existing !== null) {
-                return $this->replay($existing, $recipient, $quote);
+                return $this->replay($existing, $recipient, $quote, $lineSnapshots);
             }
 
             if ($coupon !== null) {
@@ -111,10 +114,7 @@ class CreatePaymentAttempt
                 'gateway_transaction_id' => null,
                 'status' => PaymentStatus::Unpaid,
                 'amount_vnd' => $quote->grandTotalVnd,
-                'items_snapshot_json' => array_map(
-                    fn ($line) => $line->snapshot(),
-                    $quote->lines,
-                ),
+                'items_snapshot_json' => $lineSnapshots,
                 'recipient_snapshot_json' => $quote->recipient->snapshot(),
                 'pricing_snapshot_json' => [
                     'cart_subtotal_vnd' => $quote->cartSubtotalVnd,
@@ -193,11 +193,12 @@ class CreatePaymentAttempt
         PaymentAttempt $attempt,
         CheckoutRecipient $recipient,
         CheckoutQuote $quote,
+        array $lineSnapshots,
     ): PaymentAttempt {
         $storedPayload = $this->storedReplayPayload($attempt);
         $currentPayload = [
             'recipient' => $recipient->snapshot(),
-            'lines' => $this->sortLines(array_map(fn ($line) => $line->snapshot(), $quote->lines)),
+            'lines' => $this->sortLines($lineSnapshots),
             'pricing' => $this->pricingSnapshot($quote),
         ];
 
@@ -229,11 +230,12 @@ class CreatePaymentAttempt
 
         foreach ($attempt->items_snapshot_json as $line) {
             if (! is_array($line)
-                || ! isset($line['product_id'], $line['quantity'], $line['unit_price_vnd'], $line['line_subtotal_vnd'])
+                || ! isset($line['product_id'], $line['quantity'], $line['unit_price_vnd'])
                 || ! is_int($line['product_id'])
                 || ! is_int($line['quantity'])
                 || ! is_int($line['unit_price_vnd'])
-                || ! is_int($line['line_subtotal_vnd'])) {
+                || (! is_int($line['subtotal_vnd'] ?? null)
+                    && ! is_int($line['line_subtotal_vnd'] ?? null))) {
                 return null;
             }
         }
@@ -266,6 +268,41 @@ class CreatePaymentAttempt
     private function sortLines(array $lines): array
     {
         usort($lines, fn (array $left, array $right): int => $left['product_id'] <=> $right['product_id']);
+
+        return $lines;
+    }
+
+    /**
+     * @param  array<int, int>  $discounts
+     * @return list<array<string, int|string>>
+     */
+    private function attemptLineSnapshots(CheckoutQuote $quote, array $discounts): array
+    {
+        $lines = collect($quote->lines)
+            ->sortBy(fn ($line): int => $line->productId)
+            ->values()
+            ->map(fn ($line): array => $line->paymentAttemptSnapshot($discounts[$line->productId] ?? -1))
+            ->all();
+
+        $subtotal = 0;
+        $discount = 0;
+        $total = 0;
+        foreach ($lines as $line) {
+            if ($line['subtotal_vnd'] > PHP_INT_MAX - $subtotal
+                || $line['discount_vnd'] > PHP_INT_MAX - $discount
+                || $line['line_total_vnd'] > PHP_INT_MAX - $total) {
+                throw ValidationException::withMessages(['cart' => 'Snapshot dòng thanh toán vượt giới hạn số nguyên.']);
+            }
+            $subtotal += $line['subtotal_vnd'];
+            $discount += $line['discount_vnd'];
+            $total += $line['line_total_vnd'];
+        }
+
+        if ($subtotal !== $quote->cartSubtotalVnd
+            || $discount !== $quote->productDiscountVnd
+            || $total !== $quote->cartSubtotalVnd - $quote->productDiscountVnd) {
+            throw ValidationException::withMessages(['cart' => 'Snapshot dòng thanh toán không khớp tổng báo giá.']);
+        }
 
         return $lines;
     }

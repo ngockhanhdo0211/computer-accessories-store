@@ -19,6 +19,8 @@ class PaymentAttempt extends Model
 
     protected $dateFormat = 'Y-m-d H:i:s.u';
 
+    private bool $allowsCallbackFinalization = false;
+
     protected static function booted(): void
     {
         static::updating(function (PaymentAttempt $attempt): void {
@@ -28,6 +30,15 @@ class PaymentAttempt extends Model
 
             if ($attempt->isDirty($immutable)) {
                 throw new \LogicException('Payment Attempt identity and checkout snapshots are immutable.');
+            }
+
+            $callbackFields = [
+                'status', 'gateway_transaction_id', 'gateway_result_code', 'gateway_transaction_status',
+                'gateway_paid_at', 'gateway_bank_code', 'callback_fingerprint', 'verified_at',
+                'late_callback_exception',
+            ];
+            if ($attempt->isDirty($callbackFields) && ! $attempt->allowsCallbackFinalization) {
+                throw new \LogicException('Payment Attempt callback state may only change through finalization.');
             }
         });
     }
@@ -43,6 +54,7 @@ class PaymentAttempt extends Model
             'shipping_fee_vnd' => 'integer',
             'expires_at' => 'immutable_datetime',
             'verified_at' => 'immutable_datetime',
+            'gateway_paid_at' => 'immutable_datetime',
             'late_callback_exception' => 'boolean',
         ];
     }
@@ -75,5 +87,21 @@ class PaymentAttempt extends Model
     public function couponUsage(): HasOne
     {
         return $this->hasOne(CouponUsage::class);
+    }
+
+    public function refund(): HasOne
+    {
+        return $this->hasOne(Refund::class);
+    }
+
+    public function finalizeCallback(array $attributes): bool
+    {
+        $this->allowsCallbackFinalization = true;
+
+        try {
+            return $this->forceFill($attributes)->save();
+        } finally {
+            $this->allowsCallbackFinalization = false;
+        }
     }
 }

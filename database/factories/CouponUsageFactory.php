@@ -47,7 +47,15 @@ class CouponUsageFactory extends Factory
 
             if ($usage->status === CouponUsageStatus::Consumed && $usage->order_id === null) {
                 $attempt = PaymentAttempt::query()->findOrFail($usage->payment_attempt_id);
-                $attempt->forceFill(['status' => PaymentStatus::Paid, 'verified_at' => now()])->save();
+                $attempt->finalizeCallback([
+                    'status' => PaymentStatus::Paid,
+                    'gateway_transaction_id' => 'TX-'.str_replace('-', '', fake()->uuid()),
+                    'gateway_result_code' => '00',
+                    'gateway_transaction_status' => '00',
+                    'gateway_paid_at' => now(),
+                    'callback_fingerprint' => hash('sha256', fake()->uuid()),
+                    'verified_at' => now(),
+                ]);
                 $usage->order_id = Order::factory()->forVerifiedAttempt($attempt)->create([
                     'coupon_snapshot_json' => $attempt->pricing_snapshot_json['coupon'],
                 ])->id;
