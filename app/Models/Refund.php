@@ -8,6 +8,7 @@ use Database\Factories\RefundFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use LogicException;
 
 class Refund extends Model
@@ -56,5 +57,10 @@ class Refund extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function gatewayAttempt(): HasOne
+    {
+        return $this->hasOne(RefundGatewayAttempt::class);
     }
 }

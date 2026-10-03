@@ -1158,6 +1158,7 @@ h1, h2, h3 { min-width: 0; overflow-wrap: anywhere; font-family: var(--font-disp
 .order-terminal-actions .empty-state--compact { margin-top: var(--space-4); padding: var(--space-5); text-align: left; }
 .order-terminal-actions .empty-state--compact h3 { margin: 0 0 var(--space-2); font-size: var(--text-base); }
 .order-terminal-actions .empty-state--compact p { margin: 0; }
+.refund-evidence-value { overflow-wrap: anywhere; font-family: var(--font-mono); font-size: var(--text-xs); }
 .order-terminal-actions .button--danger { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
 .order-terminal-actions .button--danger:hover { background: var(--color-ink); border-color: var(--color-ink); }
 .order-terminal-actions .button--danger:disabled:hover { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }

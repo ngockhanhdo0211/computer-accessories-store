@@ -19,6 +19,14 @@
                     <span class="workspace-breadcrumbs__separator" aria-hidden="true">/</span>
                     <span class="workspace-breadcrumbs__current" aria-current="page">@yield('title')</span>
                 @endif
+            @elseif (request()->routeIs('admin.refunds.*'))
+                @if (request()->routeIs('admin.refunds.index'))
+                    <span class="workspace-breadcrumbs__current" aria-current="page">Hoàn tiền VNPay</span>
+                @else
+                    <a class="workspace-breadcrumbs__section" href="{{ route('admin.refunds.index') }}">Hoàn tiền VNPay</a>
+                    <span class="workspace-breadcrumbs__separator" aria-hidden="true">/</span>
+                    <span class="workspace-breadcrumbs__current" aria-current="page">@yield('title')</span>
+                @endif
             @elseif (request()->routeIs('admin.categories.*'))
                 @if (request()->routeIs('admin.categories.index'))
                     <span class="workspace-breadcrumbs__current" aria-current="page">Danh mục</span>

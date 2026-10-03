@@ -534,6 +534,7 @@ class OrderPersistenceDatabaseTest extends TestCase
         $inspectionMigration = require database_path('migrations/2026_10_01_000001_create_return_inspections_table.php');
         $terminalMigration = require database_path('migrations/2026_10_01_000002_enable_cod_terminal_lifecycle.php');
         $callbackMigration = require database_path('migrations/2026_10_03_000000_enable_vnpay_callback_finalization.php');
+        $refundProcessingMigration = require database_path('migrations/2026_10_04_000000_enable_vnpay_refund_processing.php');
 
         foreach ([$orderMigration, $itemMigration, $historyMigration, $usageMigration, $inspectionMigration] as $migration) {
             try {
@@ -544,6 +545,7 @@ class OrderPersistenceDatabaseTest extends TestCase
             }
         }
 
+        $refundProcessingMigration->down();
         $callbackMigration->down();
         $terminalMigration->down();
         $usageMigration->down();
@@ -568,12 +570,14 @@ class OrderPersistenceDatabaseTest extends TestCase
         $usageMigration->up();
         $terminalMigration->up();
         $callbackMigration->up();
+        $refundProcessingMigration->up();
         $this->assertTrue(Schema::hasTable('orders'));
         $this->assertTrue(Schema::hasTable('order_items'));
         $this->assertTrue(Schema::hasTable('order_status_histories'));
         $this->assertTrue(Schema::hasTable('coupon_usages'));
         $this->assertTrue(Schema::hasTable('return_inspections'));
         $this->assertTrue(Schema::hasTable('refunds'));
+        $this->assertTrue(Schema::hasTable('refund_gateway_attempts'));
         $this->assertTrue(Schema::hasColumn('inventory_transactions', 'order_item_id'));
         $this->assertTrue(Schema::hasColumn('inventory_transactions', 'return_inspection_id'));
     }

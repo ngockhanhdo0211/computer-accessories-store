@@ -21,6 +21,8 @@ class PaymentAttempt extends Model
 
     private bool $allowsCallbackFinalization = false;
 
+    private bool $allowsRefundFinalization = false;
+
     protected static function booted(): void
     {
         static::updating(function (PaymentAttempt $attempt): void {
@@ -37,7 +39,12 @@ class PaymentAttempt extends Model
                 'gateway_paid_at', 'gateway_bank_code', 'callback_fingerprint', 'verified_at',
                 'late_callback_exception',
             ];
-            if ($attempt->isDirty($callbackFields) && ! $attempt->allowsCallbackFinalization) {
+            $refundDirtyFields = array_diff(array_keys($attempt->getDirty()), ['status', 'updated_at']);
+            if ($attempt->isDirty($callbackFields)
+                && ! $attempt->allowsCallbackFinalization
+                && ! ($attempt->allowsRefundFinalization
+                    && $refundDirtyFields === []
+                    && $attempt->status === PaymentStatus::Refunded)) {
                 throw new \LogicException('Payment Attempt callback state may only change through finalization.');
             }
         });
@@ -92,6 +99,17 @@ class PaymentAttempt extends Model
     public function refund(): HasOne
     {
         return $this->hasOne(Refund::class);
+    }
+
+    public function markRefunded(): bool
+    {
+        $this->allowsRefundFinalization = true;
+
+        try {
+            return $this->forceFill(['status' => PaymentStatus::Refunded])->save();
+        } finally {
+            $this->allowsRefundFinalization = false;
+        }
     }
 
     public function finalizeCallback(array $attributes): bool

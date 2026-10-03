@@ -13,7 +13,7 @@ trait AuthorizesActiveAdmin
     {
         if (UserRole::tryFrom((string) $user->getRawOriginal('role')) !== UserRole::Admin
             || UserStatus::tryFrom((string) $user->getRawOriginal('status')) !== UserStatus::Active) {
-            throw ValidationException::withMessages(['authorization' => 'Tài khoản không có quyền quản lý mã giảm giá.']);
+            throw ValidationException::withMessages(['authorization' => 'Tài khoản không có quyền thực hiện thao tác quản trị này.']);
         }
     }
 }

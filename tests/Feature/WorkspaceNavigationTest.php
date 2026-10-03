@@ -118,10 +118,10 @@ class WorkspaceNavigationTest extends TestCase
             ->assertSee('href="#workspace-main"', false)
             ->assertSee('href="'.route('admin.coupons.index').'"', false)
             ->assertSee('href="'.route('admin.orders.index').'"', false)
+            ->assertSee('href="'.route('admin.refunds.index').'"', false)
             ->assertDontSee('/admin/customers', false)
             ->assertDontSee('/admin/reviews', false)
-            ->assertDontSee('/admin/payments', false)
-            ->assertDontSee('/admin/refunds', false);
+            ->assertDontSee('/admin/payments', false);
     }
 
     public function test_workspace_topbar_provides_role_aware_breadcrumbs_without_repeating_store_navigation(): void

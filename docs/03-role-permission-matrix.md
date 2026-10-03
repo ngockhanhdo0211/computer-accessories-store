@@ -24,6 +24,8 @@ Ký hiệu: **Có** = được phép trong phạm vi và điều kiện nêu dư
 | Quản lý khách hàng và nhân viên | Không | Không | Có |
 | Approve, hide, soft delete review | Không | Không | Có |
 | Quản lý mã giảm giá; yêu cầu tính lại hạng có audit | Không | Không | Có |
+| Gửi một lần Refund pending tới VNPay | Không | Không | Có, chỉ tài khoản active |
+| Đối soát thủ công Refund ambiguous | Không | Không | Có, bắt buộc ghi chú/chứng từ nếu có |
 | Sửa hạng thành viên trực tiếp | Không | Không | Không |
 | Xem thống kê và audit log | Không | Không | Có |
 | Sửa tổng tiền/giá snapshot của đơn | Không | Không | Không |
@@ -38,3 +40,4 @@ Ký hiệu: **Có** = được phép trong phạm vi và điều kiện nêu dư
 - Employee hủy `da_dat`/`cho_chuyen_phat` có lý do; customer chỉ tự hủy `da_dat` của mình. Đơn `dang_trung_chuyen` không được hủy trực tiếp; chỉ admin chuyển `da_huy` sau xác nhận hàng quay lại và kiểm tra. Admin có thể hủy trước trung chuyển theo cùng điều kiện nghiệp vụ. Xem [04-order-lifecycle.md](04-order-lifecycle.md).
 - Nhân viên không quản lý sản phẩm, danh mục, thương hiệu, nhân viên hay phân quyền; không sửa tổng tiền/giá chi tiết đơn và không bỏ qua thứ tự vận chuyển.
 - Admin quản lý hệ thống nhưng vẫn bị chặn bởi kiểm tra trạng thái, tồn kho, thanh toán, quyền sở hữu khi hành động thay mặt khách và bảo vệ admin cuối cùng. Thao tác nhạy cảm phải có audit log.
+- Refund external và reconciliation chỉ do Admin active thực hiện. Employee/Customer không được kích hoạt; không có batch hoặc command tự động gửi Refund. Kết quả ambiguous phải được kiểm tra trên VNPay Merchant Portal trước khi Admin xác nhận succeeded/failed.

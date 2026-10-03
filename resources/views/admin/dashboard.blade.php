@@ -87,7 +87,7 @@
             <h2 id="roadmap-title">Các phần tiếp theo</h2>
             <p>Những module này chưa có dữ liệu để thống kê.</p>
             <ul>
-                @foreach (['Xử lý vòng đời đơn', 'Thanh toán VNPay', 'Hoàn tiền', 'Đánh giá'] as $module)
+                @foreach (['Xử lý vòng đời đơn', 'Thanh toán VNPay', 'Đánh giá'] as $module)
                     <li><span>{{ $module }}</span><span>Chưa triển khai</span></li>
                 @endforeach
             </ul>
@@ -97,6 +97,7 @@
             <h2 id="quick-title">Đi nhanh</h2>
             <p>Các trang đang hoạt động.</p>
             <a class="button" href="{{ route('inventory.index') }}">Quản lý tồn kho</a>
+            <a class="button button--outline" href="{{ route('admin.refunds.index') }}">Quản lý hoàn tiền</a>
             <a class="button button--outline" href="{{ route('inventory.adjustments.index') }}">Duyệt điều chỉnh</a>
             <a class="text-link" href="{{ route('admin.categories.create') }}">Tạo danh mục</a>
             <a class="button button--outline" href="{{ route('admin.categories.index') }}">Quản lý danh mục</a>

@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Contracts\VnPayRefundTransport;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\CartItem;
+use App\Services\VnPayRefundGateway;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -12,7 +14,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->bind(VnPayRefundTransport::class, VnPayRefundGateway::class);
     }
 
     public function boot(): void

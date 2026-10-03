@@ -184,7 +184,9 @@ class PaymentAttemptDatabaseTest extends TestCase
         $attemptMigration = require database_path('migrations/2026_09_28_000000_create_payment_attempts_table.php');
         $reservationMigration = require database_path('migrations/2026_09_28_000001_create_stock_reservations_table.php');
         $callbackMigration = require database_path('migrations/2026_10_03_000000_enable_vnpay_callback_finalization.php');
+        $refundProcessingMigration = require database_path('migrations/2026_10_04_000000_enable_vnpay_refund_processing.php');
 
+        $refundProcessingMigration->down();
         $callbackMigration->down();
         $reservationMigration->down();
         $attemptMigration->down();
@@ -197,11 +199,13 @@ class PaymentAttemptDatabaseTest extends TestCase
         $attemptMigration->up();
         $reservationMigration->up();
         $callbackMigration->up();
+        $refundProcessingMigration->up();
         $this->assertTrue(Schema::hasTable('payment_attempts'));
         $this->assertTrue(Schema::hasTable('stock_reservations'));
         $this->assertDatabaseCount('payment_attempts', 0);
         $this->assertDatabaseCount('stock_reservations', 0);
         $this->assertDatabaseCount('refunds', 0);
+        $this->assertDatabaseCount('refund_gateway_attempts', 0);
     }
 
     public function test_order_and_coupon_usage_persistence_exist_while_stock_consume_remains_absent(): void

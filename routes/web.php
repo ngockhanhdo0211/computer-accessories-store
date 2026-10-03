@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductImageController;
+use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\ShippingRateController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredCustomerController;
@@ -110,6 +111,11 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/refunds', [RefundController::class, 'index'])->name('refunds.index');
+        Route::get('/refunds/{refund}', [RefundController::class, 'show'])->name('refunds.show');
+        Route::post('/refunds/{refund}/submit', [RefundController::class, 'submit'])->name('refunds.submit');
+        Route::patch('/refunds/{refund}/mark-ambiguous', [RefundController::class, 'markAmbiguous'])->name('refunds.mark-ambiguous');
+        Route::patch('/refunds/{refund}/reconcile', [RefundController::class, 'reconcile'])->name('refunds.reconcile');
         Route::get('/orders', [ManagedOrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{orderCode}', [ManagedOrderController::class, 'show'])
             ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')

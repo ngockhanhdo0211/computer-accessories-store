@@ -40,6 +40,7 @@
             <p class="workspace-nav__label">Vận hành</p>
             @if (auth()->user()->isAdmin())
                 <a href="{{ route('admin.orders.index') }}" @if(request()->routeIs('admin.orders.*')) aria-current="page" @endif>Đơn hàng</a>
+                <a href="{{ route('admin.refunds.index') }}" @if(request()->routeIs('admin.refunds.*')) aria-current="page" @endif>Hoàn tiền VNPay</a>
             @else
                 <a href="{{ route('employee.orders.index') }}" @if(request()->routeIs('employee.orders.*')) aria-current="page" @endif>Đơn hàng</a>
             @endif

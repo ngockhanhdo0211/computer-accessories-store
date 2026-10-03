@@ -117,4 +117,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(MembershipHistory::class, 'requested_by');
     }
+
+    public function submittedRefundGatewayAttempts(): HasMany
+    {
+        return $this->hasMany(RefundGatewayAttempt::class, 'submitted_by');
+    }
+
+    public function reconciledRefundGatewayAttempts(): HasMany
+    {
+        return $this->hasMany(RefundGatewayAttempt::class, 'reconciled_by');
+    }
 }
