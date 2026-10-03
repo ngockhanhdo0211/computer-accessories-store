@@ -36,8 +36,10 @@ class CustomerOrderController extends Controller
 
     public function show(Request $request, GetOrders $orders, string $orderCode): View
     {
+        $order = $orders->customerDetail($request->user(), $orderCode);
+
         return view('orders.show', [
-            'order' => $orders->customerDetail($request->user(), $orderCode),
+            'order' => $order->load('cancellationRequest'),
         ]);
     }
 }

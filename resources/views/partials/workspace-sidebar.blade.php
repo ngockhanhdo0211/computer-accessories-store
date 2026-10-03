@@ -40,9 +40,11 @@
             <p class="workspace-nav__label">Vận hành</p>
             @if (auth()->user()->isAdmin())
                 <a href="{{ route('admin.orders.index') }}" @if(request()->routeIs('admin.orders.*')) aria-current="page" @endif>Đơn hàng</a>
+                <a href="{{ route('admin.order-cancellation-requests.index') }}" @if(request()->routeIs('admin.order-cancellation-requests.*')) aria-current="page" @endif>Yêu cầu hủy đơn</a>
                 <a href="{{ route('admin.refunds.index') }}" @if(request()->routeIs('admin.refunds.*')) aria-current="page" @endif>Hoàn tiền VNPay</a>
             @else
                 <a href="{{ route('employee.orders.index') }}" @if(request()->routeIs('employee.orders.*')) aria-current="page" @endif>Đơn hàng</a>
+                <a href="{{ route('employee.order-cancellation-requests.index') }}" @if(request()->routeIs('employee.order-cancellation-requests.*')) aria-current="page" @endif>Yêu cầu hủy đơn</a>
             @endif
             <a href="{{ route('inventory.index') }}" @if(request()->routeIs('inventory.*')) aria-current="page" @endif>Tồn kho</a>
             @if (auth()->user()->isAdmin())

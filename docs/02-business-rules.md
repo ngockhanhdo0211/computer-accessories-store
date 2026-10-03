@@ -30,8 +30,8 @@ Các từ khóa trạng thái/mã dưới đây là giá trị nghiệp vụ đ�
 
 - Backend kiểm tra lại sản phẩm, giá, tồn kho, mã giảm giá; phí vận chuyển do server tính. Khách nhập người nhận, chọn COD/VNPay và xem bước xác nhận trước khi đặt. Chống tạo đơn trùng.
 - Khi đơn được tạo hợp lệ, lưu order, order items, biến động kho, lượt dùng mã, trạng thái và cập nhật giỏ trong transaction. Với COD, thực hiện khi xác nhận đặt đơn; với VNPay, chỉ thực hiện sau khi xác minh thành công và chuyển reservation thành xuất kho. Order item lưu snapshot tên, SKU, giá và phần discount được phân bổ lúc mua; order lưu snapshot người nhận và ưu đãi.
-- Customer chỉ hủy đơn của mình ở `da_dat`. Employee hủy `da_dat` hoặc `cho_chuyen_phat` khi có lý do. Không hủy trực tiếp đơn `dang_trung_chuyen`; chỉ admin chuyển sang `da_huy` sau khi xác nhận hàng quay lại. Không xóa đơn; xem [04-order-lifecycle.md](04-order-lifecycle.md).
-- Màn hình quản lý đơn hỗ trợ tra cứu, xem chi tiết và trong Order Transit Progression Phase 1 cho Admin/Employee thực hiện hai bước tiến vận chuyển đã chốt. Tra cứu theo mã đơn, tài khoản đặt, người nhận, email, điện thoại, địa chỉ; lọc theo trạng thái vận chuyển/thanh toán, phương thức thanh toán, khoảng thời gian; có phân trang và mặc định mới nhất trước. Các thao tác giao thành công và hủy vẫn thuộc slice tương lai.
+- Customer không tự đổi trạng thái Order. Customer active chỉ được gửi đúng một yêu cầu hủy cho Order của chính mình khi Order còn `da_dat`; Admin/Employee active mới approve hoặc reject. Request pending không đổi Order, inventory, payment, Coupon Usage hay Refund; request approved/rejected là terminal, không rút lại, sửa lý do hoặc gửi lại trong MVP. Employee/Admin vẫn có luồng staff cancellation riêng theo điều kiện lifecycle hiện có. Không xóa đơn; xem [04-order-lifecycle.md](04-order-lifecycle.md).
+- Màn hình quản lý đơn hỗ trợ tra cứu, xem chi tiết và các transition đã triển khai. Workspace Admin/Employee có danh sách và chi tiết Customer Cancellation Request, nhưng Employee không được kích hoạt Refund gateway/reconciliation.
 
 ## Tiền
 
@@ -42,7 +42,7 @@ Các từ khóa trạng thái/mã dưới đây là giá trị nghiệp vụ đ�
 ## Thanh toán
 
 - Phương thức: `cod`, `vnpay`. Trạng thái thanh toán: `chua_thanh_toan`, `da_thanh_toan`, `that_bai`, `hoan_tien`, độc lập với vận chuyển.
-- COD tạo đơn hợp lệ ở `chua_thanh_toan`; chỉ ghi `da_thanh_toan` khi giao thành công. Khi một COD bị hủy trong slice cancellation tương lai, `order_status` chuyển `da_huy` nhưng `payment_status` giữ nguyên `chua_thanh_toan`, không đổi thành `that_bai`, vì chưa có giao dịch thanh toán thất bại.
+- COD tạo đơn hợp lệ ở `chua_thanh_toan`; chỉ ghi `da_thanh_toan` khi giao thành công. Khi COD bị hủy, `order_status` chuyển `da_huy` nhưng `payment_status` giữ nguyên `chua_thanh_toan`, không đổi thành `that_bai`, vì chưa có giao dịch thanh toán thất bại.
 - Trước khi chuyển sang VNPay, tạo `payment_attempt` và `stock_reservation` 15 phút, chưa tạo order chính thức. Tồn khả dụng trừ reservation còn hiệu lực. Attempt mới snapshot từng Cart line gồm định danh/timestamp Cart, giá, subtotal, discount phân bổ bằng largest remainder và line total; callback tạo Order chỉ từ snapshot bất biến, không đọc lại Cart, giá hoặc Coupon targets hiện tại.
 - Khởi tạo VNPay dùng `payment_attempts.gateway_reference` làm `vnp_TxnRef`; attempt mới dùng `PA` cộng UUID viết hoa đã bỏ dấu gạch ngang. IP khởi tạo được snapshot một lần từ request server và replay dùng lại IP, reference, thời điểm tạo/hết hạn cũ. Attempt hết hạn hoặc không còn `chua_thanh_toan` không được sinh URL mới.
 - VNPay Payment Initiation chỉ hỗ trợ Sandbox protocol `2.1.0`. Return URL công khai chỉ hiển thị trạng thái đang xác minh và tuyệt đối không cập nhật thanh toán. IPN công khai dùng GET, xác minh raw query/chữ ký HMAC-SHA512, merchant, reference và amount rồi trả JSON HTTP 200 theo mã VNPay; không lưu raw callback, signature hay secret.
@@ -53,7 +53,8 @@ Các từ khóa trạng thái/mã dưới đây là giá trị nghiệp vụ đ�
 
 ## Hủy và hoàn kho
 
-- Hủy trước bàn giao: hàng vẫn tại kho được kiểm tra và hoàn vào đúng nhóm tồn ngay một lần. Đơn đang trung chuyển không hủy trực tiếp; sau khi hàng quay lại và được kiểm tra, admin mới chuyển `da_huy` và ghi hoàn kho đúng một lần. Hàng chờ kiểm tra không vào tồn khả dụng; hàng tốt về tồn bán được, hàng hỏng vào `damaged_quantity`.
+- Customer Cancellation Request chỉ tồn tại ở `da_dat`: khi approve, không tạo Return Inspection giả; toàn bộ quantity từng item hoàn vào sellable bằng đúng một `cancel_restore` liên kết request, `damaged_delta = 0`, `sold_quantity` không đổi. Luồng staff cancellation có hàng quay lại vẫn dùng Return Inspection: đơn đang trung chuyển không hủy trực tiếp; sau khi hàng quay lại và được kiểm tra, admin mới chuyển `da_huy`. Hàng chờ kiểm tra không vào tồn khả dụng; hàng tốt về tồn bán được, hàng hỏng vào `damaged_quantity`.
+- Approve Customer Cancellation Request cho VNPay đã thanh toán tạo đúng một full Refund `pending` reason `customer_cancellation`, không gọi gateway trong transaction. Payment Attempt và Coupon Usage vẫn lần lượt `da_thanh_toan`/`consumed` cho đến khi Refund Processing xác nhận thành công; COD approve không tạo Refund và release Coupon Usage ngay.
 
 ## Mã giảm giá
 

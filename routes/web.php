@@ -16,7 +16,9 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ManagedOrderCancellationRequestController;
 use App\Http\Controllers\ManagedOrderController;
+use App\Http\Controllers\OrderCancellationRequestController;
 use App\Http\Controllers\VnPayIpnController;
 use Illuminate\Support\Facades\Route;
 
@@ -60,6 +62,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/{orderCode}', [CustomerOrderController::class, 'show'])
             ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
             ->name('show');
+        Route::post('/{orderCode}/cancellation-request', [OrderCancellationRequestController::class, 'store'])
+            ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
+            ->name('cancellation-request.store');
     });
 
     Route::get('/dashboard', function () {
@@ -74,6 +79,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/employee/dashboard', fn () => view('dashboard'))
         ->middleware('role:employee')->name('employee.dashboard');
     Route::middleware('role:employee')->prefix('employee')->name('employee.')->group(function () {
+        Route::get('/order-cancellation-requests', [ManagedOrderCancellationRequestController::class, 'index'])->name('order-cancellation-requests.index');
+        Route::get('/order-cancellation-requests/{cancellationRequest}', [ManagedOrderCancellationRequestController::class, 'show'])->name('order-cancellation-requests.show');
+        Route::patch('/order-cancellation-requests/{cancellationRequest}/approve', [ManagedOrderCancellationRequestController::class, 'approve'])->name('order-cancellation-requests.approve');
+        Route::patch('/order-cancellation-requests/{cancellationRequest}/reject', [ManagedOrderCancellationRequestController::class, 'reject'])->name('order-cancellation-requests.reject');
         Route::get('/orders', [ManagedOrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{orderCode}', [ManagedOrderController::class, 'show'])
             ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
@@ -111,6 +120,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/order-cancellation-requests', [ManagedOrderCancellationRequestController::class, 'index'])->name('order-cancellation-requests.index');
+        Route::get('/order-cancellation-requests/{cancellationRequest}', [ManagedOrderCancellationRequestController::class, 'show'])->name('order-cancellation-requests.show');
+        Route::patch('/order-cancellation-requests/{cancellationRequest}/approve', [ManagedOrderCancellationRequestController::class, 'approve'])->name('order-cancellation-requests.approve');
+        Route::patch('/order-cancellation-requests/{cancellationRequest}/reject', [ManagedOrderCancellationRequestController::class, 'reject'])->name('order-cancellation-requests.reject');
         Route::get('/refunds', [RefundController::class, 'index'])->name('refunds.index');
         Route::get('/refunds/{refund}', [RefundController::class, 'show'])->name('refunds.show');
         Route::post('/refunds/{refund}/submit', [RefundController::class, 'submit'])->name('refunds.submit');

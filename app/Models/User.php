@@ -127,4 +127,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(RefundGatewayAttempt::class, 'reconciled_by');
     }
+
+    public function orderCancellationRequests(): HasMany
+    {
+        return $this->hasMany(OrderCancellationRequest::class, 'customer_id');
+    }
+
+    public function reviewedOrderCancellationRequests(): HasMany
+    {
+        return $this->hasMany(OrderCancellationRequest::class, 'reviewed_by');
+    }
 }

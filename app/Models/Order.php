@@ -105,6 +105,16 @@ class Order extends Model
         return $this->hasOne(CouponUsage::class);
     }
 
+    public function cancellationRequest(): HasOne
+    {
+        return $this->hasOne(OrderCancellationRequest::class);
+    }
+
+    public function refund(): HasOne
+    {
+        return $this->hasOne(Refund::class);
+    }
+
     public function assertItemsReconcile(): void
     {
         $items = $this->items()->get();

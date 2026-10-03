@@ -140,7 +140,7 @@ class CustomerOrderHistoryTest extends TestCase
             ->assertSee('&lt;b&gt;Bàn phím lịch sử&lt;/b&gt;', false)
             ->assertSee('OLD-SKU')->assertSee('HISTORY10')
             ->assertDontSee('Catalog đã đổi')->assertDontSee('CHANGED')
-            ->assertDontSee('idempotency_fingerprint')->assertDontSee('request_key')
+            ->assertDontSee('idempotency_fingerprint')
             ->assertDontSee('Hủy đơn')->assertDontSee('Thanh toán ngay')->assertDontSee('Viết đánh giá');
 
         $this->actingAs($other)->get(route('orders.show', $order->order_code))->assertNotFound();

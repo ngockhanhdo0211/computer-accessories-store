@@ -12,7 +12,7 @@ da_dat ────────────────> cho_chuyen_phat ──�
 | Từ | Sang | Điều kiện chính |
 | --- | --- | --- |
 | `da_dat` | `cho_chuyen_phat` | Đơn hợp lệ, người có quyền xử lý xác nhận bàn giao. |
-| `da_dat` | `da_huy` | Customer chỉ hủy đơn mình; employee/admin phải ghi lý do. Kiểm tra hàng tại kho rồi hoàn đúng nhóm tồn một lần. |
+| `da_dat` | `da_huy` | Customer chỉ gửi Cancellation Request; Employee/Admin active approve request pending. Approval hoàn toàn bộ item về sellable đúng một lần, không tạo Return Inspection. Luồng staff cancellation riêng vẫn theo bằng chứng kiểm tra đã chốt. |
 | `cho_chuyen_phat` | `dang_trung_chuyen` | Người có quyền cập nhật vận chuyển. |
 | `cho_chuyen_phat` | `da_huy` | Employee/admin có lý do; trước bàn giao, kiểm tra hàng tại kho rồi hoàn đúng nhóm tồn một lần. |
 | `dang_trung_chuyen` | `da_giao` | Xác nhận giao thành công. |
@@ -20,7 +20,7 @@ da_dat ────────────────> cho_chuyen_phat ──�
 
 `da_giao` và `da_huy` là trạng thái kết thúc. Cấm nhảy bước, đưa đơn đã giao về trạng thái cũ, tự ý khôi phục đơn đã hủy hoặc xóa đơn. Mỗi lần đổi trạng thái lưu trạng thái cũ, mới, người thực hiện, thời gian và ghi chú/lý do. Trạng thái đơn không được dùng thay trạng thái thanh toán.
 
-**Trạng thái triển khai hiện tại:** Order Transit Progression Phase 1 và COD Order Terminal Lifecycle đã mở các cạnh COD đã chốt. VNPay Callback/IPN tạo Order `da_dat` hoặc Refund `pending` nguyên tử sau khi xác minh. Refund processing gửi tối đa một request Sandbox và hỗ trợ manual reconciliation cho kết quả ambiguous; Customer cancel và VNPay Order terminal lifecycle vẫn chưa triển khai.
+**Trạng thái triển khai hiện tại:** Order Transit Progression Phase 1 và COD Order Terminal Lifecycle đã mở các cạnh đã chốt. Customer Cancellation Request cho Order `da_dat` đã có submit/review; approval COD hoặc VNPay là một transaction nhưng VNPay chỉ tạo Refund `pending`, chưa gọi gateway. VNPay Callback/IPN và Refund Processing/Manual Reconciliation tiếp tục xử lý ở boundary riêng.
 
 **Return Inspection Foundation:** Đã có chứng từ hai giai đoạn theo từng Order Item. Employee/Admin active được tiếp nhận và hoàn tất kiểm tra ở `da_dat`/`cho_chuyen_phat`; chỉ Admin active được thao tác ở `dang_trung_chuyen`. Foundation chỉ ghi bằng chứng và audit, chưa đổi Order sang `da_huy`, chưa hoàn kho hay tạo inventory transaction.
 
@@ -28,6 +28,8 @@ da_dat ────────────────> cho_chuyen_phat ──�
 
 - Khi đơn hợp lệ được tạo: lưu snapshot order/items/người nhận/ưu đãi và discount phân bổ theo item; ghi trạng thái đầu `da_dat`; trừ kho và ghi `sale` đúng một lần. COD bắt đầu `chua_thanh_toan`. VNPay chỉ tạo order sau khi thanh toán được xác minh thành công và reservation được chuyển thành `sale`.
 - Khi hủy COD: sau khi toàn bộ Return Inspection đã completed, mỗi Order Item tạo đúng một ledger `cancel_restore` liên kết Order Item và Return Inspection. Ledger đồng thời tăng `sellable_delta` và `damaged_delta` theo hai kết quả phân loại; tổng hai delta bằng quantity. Không tạo ledger `damaged` riêng và không đổi `sold_quantity`. Nếu đã `dang_trung_chuyen`, chỉ admin được chuyển `da_huy` sau khi hàng quay lại và hoàn tất kiểm tra.
+- Khi Customer Cancellation Request ở `da_dat` được approve: request phải còn pending và Order/lịch sử phải còn `da_dat`. Mỗi Order Item tạo đúng một `cancel_restore` liên kết request, không liên kết Return Inspection; toàn bộ quantity tăng sellable, damaged/sold không đổi. Request terminal, Order history, audit, projection, ledger, Coupon/Refund effects cùng commit hoặc cùng rollback. Reject chỉ terminal request và audit, không đổi Order hay các projection.
+- Approve VNPay giữ Payment Attempt/Order payment ở `da_thanh_toan`, giữ Coupon Usage `consumed` và tạo một full Refund `pending` reason `customer_cancellation`. Chỉ Refund Processing thành công mới chuyển payment `hoan_tien` và release Coupon. Approve COD giữ payment `chua_thanh_toan`, không tạo Refund và release Coupon ngay.
 - Khi COD được hủy: `order_status` chuyển `da_huy`, còn `payment_status` giữ `chua_thanh_toan`; không dùng `that_bai` vì COD chưa phát sinh giao dịch thanh toán thất bại. Coupon Usage giữ `order_id` và `consumed_at` làm bằng chứng, đồng thời chuyển sang `released` với thời gian server.
 - COD hủy toàn bộ trả lượt coupon. VNPay chỉ trả lượt coupon sau full refund `succeeded`; refund `failed` không trả lượt, kể cả mã `free_shipping`.
 - Đơn VNPay đã thanh toán khi hủy tạo refund riêng `pending`; refund có thể `succeeded` hoặc `failed`. Chỉ full refund trong phiên bản đầu; không hoàn vượt tiền đã thanh toán hoặc ghi thành công hai lần. Khi còn `pending`/`failed`, `payment_status` vẫn `da_thanh_toan`; chỉ chuyển `hoan_tien` khi `succeeded`. Refund cũng có thể gắn payment attempt thành công mà chưa có order.
