@@ -265,3 +265,212 @@ if (couponFieldGrid) {
     syncCouponValue();
     syncCouponTargets();
 }
+
+const supportChats = document.querySelectorAll('[data-support-chat]');
+
+supportChats.forEach((chat) => {
+    const toggleButton = chat.querySelector('[data-support-toggle]');
+    const externalToggle = document.querySelector('[data-open-support-chat]');
+    const panel = chat.querySelector('[data-support-panel]');
+    const closeButton = chat.querySelector('[data-support-close]');
+    const list = chat.querySelector('[data-support-messages]');
+    const empty = chat.querySelector('[data-support-empty]');
+    const olderButton = chat.querySelector('[data-support-older]');
+    const feedback = chat.querySelector('[data-support-feedback]');
+    const form = chat.querySelector('[data-support-form]');
+    const textarea = form?.querySelector('textarea[name="content"]');
+    const keyInput = form?.querySelector('input[name="client_message_key"]');
+    const error = form?.querySelector('[data-support-error]');
+    const submit = form?.querySelector('button[type="submit"]');
+    const csrf = form?.querySelector('input[name="_token"]')?.value;
+    const renderedIds = new Set();
+    let pollTimer = null;
+    let activeRequest = null;
+    let polling = false;
+    let retryDelay = 5000;
+
+    if (!list || !form || !textarea || !keyInput || !feedback || !empty || !olderButton || !submit || !csrf) {
+        return;
+    }
+
+    const isOpen = () => chat.hasAttribute('data-workspace-thread') || (panel && !panel.hidden);
+    const makeKey = () => window.crypto?.randomUUID?.() ?? 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
+        const value = Math.random() * 16 | 0;
+        return (character === 'x' ? value : (value & 0x3 | 0x8)).toString(16);
+    });
+    const nearBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 72;
+    const messageNode = (message) => {
+        const article = document.createElement('article');
+        const label = document.createElement('strong');
+        const content = document.createElement('p');
+        const time = document.createElement('time');
+        article.className = `support-message${message.mine ? ' support-message--mine' : ''}`;
+        article.dataset.messageId = String(message.id);
+        label.textContent = message.sender_label;
+        content.textContent = message.content;
+        time.textContent = message.created_at;
+        article.append(label, content, time);
+        return article;
+    };
+    const markRead = async (messageId) => {
+        try {
+            await fetch(chat.dataset.readUrl, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                body: JSON.stringify({ message_id: messageId }) });
+        } catch (_) {
+            // The next successful poll retries with the newest visible message.
+        }
+    };
+    const render = (messages, prepend = false) => {
+        if (!Array.isArray(messages) || messages.length === 0) {
+            return;
+        }
+        const shouldScroll = nearBottom();
+        const previousHeight = list.scrollHeight;
+        const fragment = document.createDocumentFragment();
+        messages.forEach((message) => {
+            if (!renderedIds.has(message.id)) {
+                renderedIds.add(message.id);
+                fragment.append(messageNode(message));
+            }
+        });
+        if (prepend) {
+            list.prepend(fragment);
+            list.scrollTop += list.scrollHeight - previousHeight;
+        } else {
+            list.append(fragment);
+            if (shouldScroll) {
+                list.scrollTop = list.scrollHeight;
+            }
+        }
+        empty.hidden = renderedIds.size > 0;
+        const last = list.lastElementChild?.dataset.messageId;
+        if (last) {
+            markRead(Number(last));
+        }
+    };
+    const fetchMessages = async (mode = 'initial') => {
+        if (polling || !isOpen() || document.hidden) {
+            return;
+        }
+        polling = true;
+        let catchUp = false;
+        const url = new URL(chat.dataset.messagesUrl, window.location.origin);
+        if (mode === 'new' && list.lastElementChild) {
+            url.searchParams.set('after_id', list.lastElementChild.dataset.messageId);
+        } else if (mode === 'older' && list.firstElementChild) {
+            url.searchParams.set('before_id', list.firstElementChild.dataset.messageId);
+        }
+        activeRequest = new AbortController();
+        try {
+            const response = await fetch(url, { headers: { Accept: 'application/json' }, signal: activeRequest.signal });
+            if (!response.ok) {
+                throw new Error('Không thể tải tin nhắn.');
+            }
+            const data = await response.json();
+            render(data.messages, mode === 'older');
+            olderButton.hidden = !(data.has_more || (mode === 'initial' && data.messages.length === 50));
+            catchUp = mode === 'new' && data.has_more === true;
+            feedback.textContent = '';
+            retryDelay = 5000;
+        } catch (requestError) {
+            if (requestError.name !== 'AbortError') {
+                feedback.textContent = 'Kết nối gián đoạn. Hệ thống sẽ tự thử lại.';
+                retryDelay = Math.min(retryDelay * 2, 30000);
+            }
+        } finally {
+            polling = false;
+            activeRequest = null;
+            if (catchUp && isOpen() && !document.hidden) {
+                fetchMessages('new');
+            } else {
+                schedulePoll();
+            }
+        }
+    };
+    const schedulePoll = () => {
+        window.clearTimeout(pollTimer);
+        if (isOpen() && !document.hidden) {
+            pollTimer = window.setTimeout(() => fetchMessages('new'), retryDelay);
+        }
+    };
+    const open = () => {
+        if (panel) {
+            panel.hidden = false;
+            toggleButton?.setAttribute('aria-expanded', 'true');
+        }
+        feedback.textContent = renderedIds.size === 0 ? 'Đang tải tin nhắn…' : '';
+        fetchMessages(renderedIds.size === 0 ? 'initial' : 'new');
+        window.setTimeout(() => textarea.focus(), 0);
+    };
+    const close = () => {
+        if (!panel) {
+            return;
+        }
+        panel.hidden = true;
+        toggleButton?.setAttribute('aria-expanded', 'false');
+        activeRequest?.abort();
+        window.clearTimeout(pollTimer);
+        toggleButton?.focus();
+    };
+
+    toggleButton?.addEventListener('click', () => panel?.hidden ? open() : close());
+    externalToggle?.addEventListener('click', open);
+    closeButton?.addEventListener('click', close);
+    olderButton.addEventListener('click', () => fetchMessages('older'));
+    textarea.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
+            event.preventDefault();
+            form.requestSubmit();
+        }
+    });
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (submit.disabled) {
+            return;
+        }
+        submit.disabled = true;
+        error.textContent = '';
+        feedback.textContent = 'Đang gửi…';
+        try {
+            const response = await fetch(chat.dataset.sendUrl, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                body: JSON.stringify({ client_message_key: keyInput.value, content: textarea.value }) });
+            const data = await response.json();
+            if (!response.ok) {
+                const firstError = Object.values(data.errors ?? {}).flat().at(0);
+                throw new Error(firstError ?? (response.status === 429 ? 'Bạn đang gửi quá nhanh. Vui lòng chờ một chút.' : 'Không thể gửi tin nhắn.'));
+            }
+            render([data.message]);
+            textarea.value = '';
+            keyInput.value = makeKey();
+            feedback.textContent = 'Đã gửi tin nhắn.';
+            retryDelay = 5000;
+            schedulePoll();
+        } catch (sendError) {
+            error.textContent = sendError.message;
+            feedback.textContent = 'Tin nhắn chưa được gửi. Nội dung vẫn được giữ để bạn thử lại.';
+            textarea.focus();
+        } finally {
+            submit.disabled = false;
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && panel && !panel.hidden) {
+            close();
+        }
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            activeRequest?.abort();
+            window.clearTimeout(pollTimer);
+        } else if (isOpen()) {
+            fetchMessages(renderedIds.size === 0 ? 'initial' : 'new');
+        }
+    });
+    window.addEventListener('pagehide', () => {
+        activeRequest?.abort();
+        window.clearTimeout(pollTimer);
+    });
+    if (chat.hasAttribute('data-workspace-thread')) {
+        open();
+    }
+});

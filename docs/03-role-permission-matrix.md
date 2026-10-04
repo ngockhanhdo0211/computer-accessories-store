@@ -11,6 +11,8 @@ Ký hiệu: **Có** = được phép trong phạm vi và điều kiện nêu dư
 | Đặt COD/VNPay, xem đơn của mình | Có | Không | Không |
 | Gửi yêu cầu hủy Order của mình ở `da_dat` | Có | Không | Không |
 | Xem và approve/reject Customer Cancellation Request pending | Không | Có | Có |
+| Xem/gửi hội thoại hỗ trợ của chính mình | Có | Không | Không |
+| Xem shared support inbox, trả lời và đóng/mở lại hội thoại | Không | Có | Có |
 | Hủy đơn `cho_chuyen_phat` có lý do | Không | Có | Có |
 | Chuyển `dang_trung_chuyen` sang `da_huy` sau xác nhận hàng quay lại | Không | Không | Có |
 | Tạo review cho order item `da_giao` của mình (tối đa một/item, rating 1–5) | Có | Không | Không |

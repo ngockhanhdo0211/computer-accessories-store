@@ -11,6 +11,16 @@ Tài liệu này là thiết kế cho MariaDB/MySQL. Các migration `users`, Cat
 - Không lưu tổng có thể tính tùy tiện. `products.sellable_quantity`, `damaged_quantity`, `sold_quantity` là **projection giao dịch** để khóa và đọc nhanh, cập nhật cùng transaction với `inventory_transactions`/chuyển `da_giao`; có tác vụ đối soát từ sổ giao dịch. `available = sellable_quantity - SUM(reservations còn hiệu lực)` tính khi truy vấn dưới khóa, không lưu. `orders` giữ tổng và snapshot vì cần lịch sử kế toán; `users.current_tier` và `users.membership_spending` là projection từ đơn đã giao chưa full refund, không tính shipping; có lịch sử hạng và phép tính lại. Cả hai chỉ được cập nhật qua nghiệp vụ/tính lại có audit.
 - Không hard delete order, item, payment, refund, inventory, coupon usage, review history, audit. FKs dùng `RESTRICT` cho dữ liệu giao dịch, `SET NULL` chỉ khi danh tính tác nhân phụ trợ được phép biến mất; không cascade xóa lịch sử. Mọi FK dùng `ON UPDATE RESTRICT` vì ID không được đổi.
 
+## Support Chat Foundation
+
+| Bảng | Cột chính | Bất biến |
+| --- | --- | --- |
+| `support_conversations` | `customer_id`, `status`, `last_message_at`, `closed_by`, `closed_at`, timestamps DATETIME(6) | `UQ(customer_id)`; Customer/closer FK RESTRICT. `open` không có close evidence; `closed` bắt buộc staff active và thời gian đóng. Customer bất biến, không hard-delete; index `(status,last_message_at,id)` phục vụ shared inbox. |
+| `support_messages` | `conversation_id`, `sender_id`, `content`, `client_message_key`, `created_at` DATETIME(6) | `UQ(sender_id,client_message_key)`; content UTF-8 plain text 1–2.000 ký tự. Sender là owner Customer hoặc Admin/Employee active. Append-only bằng model và trigger MariaDB/SQLite. |
+| `support_conversation_reads` | `conversation_id`, `user_id`, `last_read_message_id`, `read_at` DATETIME(6) | PK ghép `(conversation_id,user_id)`; message đọc phải thuộc conversation; marker chỉ tiến tới. Customer chỉ có marker ở conversation của mình, staff active có marker riêng. |
+
+Writer dùng lock order ổn định: actor → conversation → message idempotency → message mới → read marker. Message, projection `last_message_at`, reopen và read marker của sender cùng commit/rollback; trigger giữ projection không thấp hơn message mới nhất kể cả với direct SQL hợp lệ. Inbox tính unread theo marker của staff hiện tại, không dùng cờ `is_read` chung. UI lấy tối đa 50 message theo `before_id`/`after_id`, tự fetch tiếp nếu backlog tin mới còn đủ một batch và polling khoảng 5 giây chỉ khi chat mở; chưa có attachment, anonymous chat, sửa/xóa, retention/export/moderation hay WebSocket.
+
 ## ERD
 
 ```mermaid

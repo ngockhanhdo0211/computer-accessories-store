@@ -14,6 +14,7 @@
 | Thanh toán | payment_attempts, refunds | Attempt có trước order VNPay và gắn reservation; line snapshot mới giữ Cart identity, subtotal, discount phân bổ và line total. Payment thành công có thể chưa có order khi thiếu stock/Coupon capacity hoặc snapshot lịch sử không đủ phân bổ. Refund full `pending/succeeded/failed` liên kết bắt buộc attempt và có thể chưa có order. Ràng buộc một order/attempt, một refund/attempt và gateway transaction unique. |
 | Ưu đãi và vận chuyển | coupons, coupon_targets, coupon_usages; shipping_rates hoặc cấu hình tập trung | Coupon chỉ một scope `cart/product/category/brand`, nhiều target cùng loại. `min_subtotal` lấy giá bán sản phẩm đủ điều kiện sau promotion, trước coupon, không shipping. Phí Hà Nội 30.000 VND, nơi khác 45.000 VND; không miễn tự động theo tổng, không thuế riêng. |
 | Đánh giá | reviews | Unique theo order item `da_giao`; rating 1–5. Tạo trong 90 ngày, sửa trong 7 ngày; đã duyệt sửa lại về `pending`. Customer soft delete của mình; admin approve/hide/soft delete; full refund/trả hàng ẩn review, giữ lịch sử. |
+| Hỗ trợ | support_conversations, support_messages, support_conversation_reads | Một conversation/Customer; Admin/Employee dùng shared inbox. Message plain text append-only và idempotent theo sender/key; read marker riêng từng user chỉ tiến tới. Incremental polling là transport MVP, không attachment/anonymous/WebSocket. |
 
 ## Ràng buộc thiết kế bắt buộc
 

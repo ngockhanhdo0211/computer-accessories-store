@@ -18,6 +18,14 @@ Các từ khóa trạng thái/mã dưới đây là giá trị nghiệp vụ đ�
 - Danh mục quản lý động, hỗ trợ cha-con; cấm tự làm cha hoặc tạo chu trình. Không xóa category/brand đang được dùng, không tự động xóa sản phẩm liên quan. Ưu tiên ẩn dữ liệu đã phát sinh nghiệp vụ thay vì xóa.
 - Category/brand bị ẩn vẫn giữ quan hệ với product, nhưng product liên quan không hiển thị hoặc bán công khai; admin vẫn quản lý được. Cảnh báo số product bị ảnh hưởng trước khi ẩn. Muốn bán lại phải kích hoạt category/brand hoặc chuyển product sang đối tượng đang hoạt động.
 
+## Hỗ trợ khách hàng
+
+- Mỗi Customer có tối đa một hội thoại hỗ trợ riêng. Customer chỉ xem/gửi trong hội thoại của mình; Admin và Employee active dùng chung hộp thư và đều có thể trả lời.
+- Tin nhắn plain text tối đa 2.000 ký tự, append-only, không sửa/xóa và không có attachment trong MVP. Không hỗ trợ anonymous chat.
+- Mỗi người có read marker riêng; tin tự gửi không tính unread. Hội thoại đã đóng được tự mở lại khi Customer hoặc staff gửi tin mới.
+- Foundation dùng incremental polling khoảng 5 giây khi màn chat đang mở, chỉ lấy message ID mới hơn; đây không phải realtime tuyệt đối và chưa dùng WebSocket/Reverb/Pusher.
+- Retention, export, attachment và moderation nằm ngoài MVP cho tới khi có contract riêng.
+
 ## Tồn kho
 
 - Không sửa số lượng kho tùy tiện trong form sản phẩm. Mọi thay đổi phải có inventory transaction loại `import`, `sale`, `cancel_restore`, `damaged`, `manual_adjustment`.

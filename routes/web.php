@@ -15,9 +15,11 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerOrderController;
+use App\Http\Controllers\CustomerSupportController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ManagedOrderCancellationRequestController;
 use App\Http\Controllers\ManagedOrderController;
+use App\Http\Controllers\ManagedSupportController;
 use App\Http\Controllers\OrderCancellationRequestController;
 use App\Http\Controllers\VnPayIpnController;
 use Illuminate\Support\Facades\Route;
@@ -67,6 +69,13 @@ Route::middleware(['auth', 'active'])->group(function () {
             ->name('cancellation-request.store');
     });
 
+    Route::middleware('role:customer')->prefix('support')->name('support.')->group(function () {
+        Route::get('/', [CustomerSupportController::class, 'show'])->name('show');
+        Route::get('/messages', [CustomerSupportController::class, 'messages'])->name('messages.index');
+        Route::post('/messages', [CustomerSupportController::class, 'store'])->middleware('throttle:support-customer')->name('messages.store');
+        Route::post('/read', [CustomerSupportController::class, 'read'])->name('read');
+    });
+
     Route::get('/dashboard', function () {
         $role = UserRole::tryFrom((string) request()->user()->getRawOriginal('role'));
         abort_unless($role !== null, 403);
@@ -79,6 +88,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/employee/dashboard', fn () => view('dashboard'))
         ->middleware('role:employee')->name('employee.dashboard');
     Route::middleware('role:employee')->prefix('employee')->name('employee.')->group(function () {
+        Route::get('/support', [ManagedSupportController::class, 'index'])->name('support.index');
+        Route::get('/support/{conversation}', [ManagedSupportController::class, 'show'])->name('support.show');
+        Route::get('/support/{conversation}/messages', [ManagedSupportController::class, 'messages'])->name('support.messages.index');
+        Route::post('/support/{conversation}/messages', [ManagedSupportController::class, 'store'])->middleware('throttle:support-staff')->name('support.messages.store');
+        Route::post('/support/{conversation}/read', [ManagedSupportController::class, 'read'])->name('support.read');
+        Route::patch('/support/{conversation}/close', [ManagedSupportController::class, 'close'])->name('support.close');
         Route::get('/order-cancellation-requests', [ManagedOrderCancellationRequestController::class, 'index'])->name('order-cancellation-requests.index');
         Route::get('/order-cancellation-requests/{cancellationRequest}', [ManagedOrderCancellationRequestController::class, 'show'])->name('order-cancellation-requests.show');
         Route::patch('/order-cancellation-requests/{cancellationRequest}/approve', [ManagedOrderCancellationRequestController::class, 'approve'])->name('order-cancellation-requests.approve');
@@ -120,6 +135,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/support', [ManagedSupportController::class, 'index'])->name('support.index');
+        Route::get('/support/{conversation}', [ManagedSupportController::class, 'show'])->name('support.show');
+        Route::get('/support/{conversation}/messages', [ManagedSupportController::class, 'messages'])->name('support.messages.index');
+        Route::post('/support/{conversation}/messages', [ManagedSupportController::class, 'store'])->middleware('throttle:support-staff')->name('support.messages.store');
+        Route::post('/support/{conversation}/read', [ManagedSupportController::class, 'read'])->name('support.read');
+        Route::patch('/support/{conversation}/close', [ManagedSupportController::class, 'close'])->name('support.close');
         Route::get('/order-cancellation-requests', [ManagedOrderCancellationRequestController::class, 'index'])->name('order-cancellation-requests.index');
         Route::get('/order-cancellation-requests/{cancellationRequest}', [ManagedOrderCancellationRequestController::class, 'show'])->name('order-cancellation-requests.show');
         Route::patch('/order-cancellation-requests/{cancellationRequest}/approve', [ManagedOrderCancellationRequestController::class, 'approve'])->name('order-cancellation-requests.approve');

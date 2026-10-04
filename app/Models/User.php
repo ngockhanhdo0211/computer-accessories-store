@@ -8,6 +8,7 @@ use App\Enums\UserStatus;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -136,5 +137,25 @@ class User extends Authenticatable
     public function reviewedOrderCancellationRequests(): HasMany
     {
         return $this->hasMany(OrderCancellationRequest::class, 'reviewed_by');
+    }
+
+    public function supportConversation(): HasOne
+    {
+        return $this->hasOne(SupportConversation::class, 'customer_id');
+    }
+
+    public function supportMessages(): HasMany
+    {
+        return $this->hasMany(SupportMessage::class, 'sender_id');
+    }
+
+    public function supportConversationReads(): HasMany
+    {
+        return $this->hasMany(SupportConversationRead::class);
+    }
+
+    public function closedSupportConversations(): HasMany
+    {
+        return $this->hasMany(SupportConversation::class, 'closed_by');
     }
 }

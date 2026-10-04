@@ -82,5 +82,10 @@
             </nav>
         </div>
     </footer>
+    @auth
+        @if(auth()->user()->isCustomer() && auth()->user()->isActive())
+            @include('support.partials.customer-widget')
+        @endif
+    @endauth
 </body>
 </html>

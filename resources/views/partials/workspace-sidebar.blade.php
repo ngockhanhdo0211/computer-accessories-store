@@ -38,6 +38,7 @@
 
         <div class="workspace-nav__group">
             <p class="workspace-nav__label">Vận hành</p>
+            <a href="{{ route(auth()->user()->isAdmin() ? 'admin.support.index' : 'employee.support.index') }}" @if(request()->routeIs('admin.support.*', 'employee.support.*')) aria-current="page" @endif>Hỗ trợ khách hàng</a>
             @if (auth()->user()->isAdmin())
                 <a href="{{ route('admin.orders.index') }}" @if(request()->routeIs('admin.orders.*')) aria-current="page" @endif>Đơn hàng</a>
                 <a href="{{ route('admin.order-cancellation-requests.index') }}" @if(request()->routeIs('admin.order-cancellation-requests.*')) aria-current="page" @endif>Yêu cầu hủy đơn</a>
