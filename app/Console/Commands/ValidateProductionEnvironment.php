@@ -39,6 +39,8 @@ class ValidateProductionEnvironment extends Command
         $this->expect($invalid, in_array(config('session.same_site'), ['lax', 'strict'], true), 'SESSION_SAME_SITE');
         $this->expect($invalid, $this->strictEnvironmentBoolean('RUN_MIGRATIONS', null, config('deployment.run_migrations')), 'RUN_MIGRATIONS');
 
+        $this->validateProductImages($invalid);
+
         $this->validateVnPay($invalid);
 
         if ($invalid !== []) {
@@ -49,13 +51,45 @@ class ValidateProductionEnvironment extends Command
             return self::FAILURE;
         }
 
-        if (in_array(config('filesystems.default'), ['local', 'public'], true)) {
-            $this->warn('FILESYSTEM_DISK uses ephemeral local storage; Product uploads are not production-ready until the Cloudinary checkpoint.');
-        }
-
         $this->info('Production configuration is valid.');
 
         return self::SUCCESS;
+    }
+
+    /** @param array<int, string> $invalid */
+    private function validateProductImages(array &$invalid): void
+    {
+        $this->expect($invalid, config('product-images.driver') === 'cloudinary', 'PRODUCT_IMAGE_DRIVER');
+
+        foreach ([
+            'CLOUDINARY_CLOUD_NAME' => config('product-images.cloudinary.cloud_name'),
+            'CLOUDINARY_API_KEY' => config('product-images.cloudinary.api_key'),
+            'CLOUDINARY_API_SECRET' => config('product-images.cloudinary.api_secret'),
+        ] as $name => $value) {
+            $this->expect($invalid, $this->validCredential($value), $name);
+        }
+
+        $folder = config('product-images.cloudinary.folder');
+        $this->expect(
+            $invalid,
+            is_string($folder)
+                && $folder === 'computer-accessories-store/production',
+            'CLOUDINARY_FOLDER'
+        );
+    }
+
+    private function validCredential(mixed $value): bool
+    {
+        if (! $this->present($value)) {
+            return false;
+        }
+
+        $raw = (string) $value;
+        $normalized = strtolower(trim($raw));
+
+        return ! in_array($normalized, ['changeme', 'placeholder', 'your-value', 'example'], true)
+            && trim($raw) === $raw
+            && ! preg_match('/[\r\n]/', $raw);
     }
 
     /** @param array<int, string> $invalid */

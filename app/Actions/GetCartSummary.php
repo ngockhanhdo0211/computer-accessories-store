@@ -23,7 +23,7 @@ class GetCartSummary
             ->with([
                 'product.category:id,name,is_visible',
                 'product.brand:id,name,is_visible',
-                'product.primaryImage:id,product_id,path,alt_text',
+                'product.primaryImage:id,product_id,storage_provider,path,cloudinary_public_id,secure_url,width,height,bytes,format,alt_text',
             ])
             ->orderBy('id')
             ->get();

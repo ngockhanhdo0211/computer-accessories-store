@@ -2,20 +2,22 @@
 
 namespace App\Actions;
 
+use App\Contracts\ProductImageStorageResolver;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\ValueObjects\StoredProductImage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class AddProductImages
 {
     public const MAX_IMAGES = 8;
+
+    public function __construct(private readonly ProductImageStorageResolver $storage) {}
 
     /**
      * @param  array<int, UploadedFile>  $files
@@ -44,41 +46,42 @@ class AddProductImages
             $validated['image_alt_texts'] ?? []
         );
 
-        $storedPaths = [];
+        $prepared = [];
+
+        foreach ($files as $index => $file) {
+            $imageInfo = @getimagesize($file->getRealPath());
+            $format = match ($imageInfo['mime'] ?? null) {
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                default => null,
+            };
+            if ($format === null) {
+                throw ValidationException::withMessages([
+                    "images.{$index}" => 'Ảnh có định dạng không hợp lệ.',
+                ]);
+            }
+            $prepared[] = [$file, $format];
+        }
+
+        if (ProductImage::query()->where('product_id', $product->id)->count() + count($prepared) > self::MAX_IMAGES) {
+            throw ValidationException::withMessages(['images' => 'Mỗi sản phẩm có tối đa 8 ảnh.']);
+        }
+
+        /** @var array<int, StoredProductImage> $storedImages */
+        $storedImages = [];
+        $adapter = $this->storage->current();
 
         try {
-            foreach ($files as $index => $file) {
-                $imageInfo = @getimagesize($file->getRealPath());
-                $extension = match ($imageInfo['mime'] ?? null) {
-                    'image/jpeg' => 'jpg',
-                    'image/png' => 'png',
-                    'image/webp' => 'webp',
-                    default => null,
-                };
-
-                if ($extension === null) {
-                    throw ValidationException::withMessages([
-                        "images.{$index}" => 'Ảnh có định dạng không hợp lệ.',
-                    ]);
-                }
-                $path = $file->storeAs(
-                    'products/'.$product->id,
-                    Str::uuid().'.'.$extension,
-                    'public'
-                );
-
-                if (! is_string($path)) {
-                    throw ValidationException::withMessages(['images' => 'Không thể lưu ảnh. Vui lòng thử lại.']);
-                }
-
-                $storedPaths[] = $path;
+            foreach ($prepared as [$file, $format]) {
+                $storedImages[] = $adapter->store((int) $product->id, $file, $format);
             }
 
-            return DB::transaction(function () use ($product, $storedPaths, $altTexts) {
+            return DB::transaction(function () use ($product, $storedImages, $altTexts) {
                 $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
                 $existing = ProductImage::query()->where('product_id', $locked->id)->lockForUpdate()->get();
 
-                if ($existing->count() + count($storedPaths) > self::MAX_IMAGES) {
+                if ($existing->count() + count($storedImages) > self::MAX_IMAGES) {
                     throw ValidationException::withMessages(['images' => 'Mỗi sản phẩm có tối đa 8 ảnh.']);
                 }
 
@@ -86,10 +89,10 @@ class AddProductImages
                 $hasPrimary = $existing->contains('is_primary', true);
                 $created = [];
 
-                foreach ($storedPaths as $index => $path) {
+                foreach ($storedImages as $index => $storedImage) {
                     $image = new ProductImage;
                     $image->forceFill([
-                        'path' => $path,
+                        ...$storedImage->attributes(),
                         'alt_text' => $altTexts[$index] ?? null,
                         'is_primary' => ! $hasPrimary && $index === 0,
                         'sort_order' => $nextOrder + $index,
@@ -102,13 +105,14 @@ class AddProductImages
                 return $created;
             }, 3);
         } catch (Throwable $exception) {
-            if ($storedPaths !== []) {
+            foreach (array_reverse($storedImages) as $storedImage) {
                 try {
-                    Storage::disk('public')->delete($storedPaths);
+                    $this->storage->forProvider($storedImage->provider)
+                        ->delete((int) $product->id, $storedImage);
                 } catch (Throwable $cleanupException) {
-                    Log::warning('Product upload rollback file cleanup failed.', [
-                        'product_id' => $product->id,
-                        'paths' => $storedPaths,
+                    Log::warning('Product upload rollback cleanup failed.', [
+                        'product_id' => (int) $product->id,
+                        'provider' => $storedImage->provider,
                         'exception' => $cleanupException::class,
                     ]);
                 }

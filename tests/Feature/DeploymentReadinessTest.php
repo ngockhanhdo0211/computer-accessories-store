@@ -181,6 +181,40 @@ class DeploymentReadinessTest extends TestCase
         $this->assertStringNotContainsString('C:/private/do-not-report-ca.pem', $output);
     }
 
+    public function test_production_validation_requires_cloudinary_without_reporting_credentials(): void
+    {
+        $this->setValidProductionConfiguration();
+        config()->set([
+            'product-images.driver' => 'local',
+            'product-images.cloudinary.api_secret' => 'do-not-report-cloudinary-secret',
+            'product-images.cloudinary.folder' => 'computer-accessories-store/qa',
+        ]);
+
+        $this->assertSame(1, Artisan::call('app:validate-production'));
+        $output = Artisan::output();
+        $this->assertStringContainsString('PRODUCT_IMAGE_DRIVER', $output);
+        $this->assertStringContainsString('CLOUDINARY_FOLDER', $output);
+        $this->assertStringNotContainsString('do-not-report-cloudinary-secret', $output);
+        $this->assertStringNotContainsString('computer-accessories-store/qa', $output);
+
+        foreach ([
+            'CLOUDINARY_CLOUD_NAME' => 'product-images.cloudinary.cloud_name',
+            'CLOUDINARY_API_KEY' => 'product-images.cloudinary.api_key',
+            'CLOUDINARY_API_SECRET' => 'product-images.cloudinary.api_secret',
+        ] as $name => $configKey) {
+            $this->setValidProductionConfiguration();
+            config()->set($configKey, null);
+
+            $this->assertSame(1, Artisan::call('app:validate-production'), $name);
+            $this->assertStringContainsString($name, Artisan::output());
+        }
+
+        $this->setValidProductionConfiguration();
+        config()->set('product-images.cloudinary.api_key', ' key-with-space ');
+        $this->assertSame(1, Artisan::call('app:validate-production'));
+        $this->assertStringContainsString('CLOUDINARY_API_KEY', Artisan::output());
+    }
+
     public function test_local_database_configuration_does_not_force_tls_without_a_ca(): void
     {
         foreach (['mysql', 'mariadb'] as $connection) {
@@ -283,6 +317,22 @@ class DeploymentReadinessTest extends TestCase
         }
     }
 
+    public function test_cloudinary_secrets_are_excluded_from_docker_and_render_blueprint_contains_names_only(): void
+    {
+        $dockerIgnore = file_get_contents(base_path('.dockerignore'));
+        $render = file_get_contents(base_path('render.yaml'));
+
+        $this->assertIsString($dockerIgnore);
+        $this->assertStringContainsString('cloudinary-*.env', $dockerIgnore);
+        $this->assertStringContainsString('*.pem', $dockerIgnore);
+        $this->assertIsString($render);
+        foreach (['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'] as $name) {
+            $this->assertMatchesRegularExpression('/key:\s+'.$name.'\s+sync:\s+false/s', $render);
+        }
+        $this->assertStringContainsString('computer-accessories-store/production', $render);
+        $this->assertStringNotContainsString('computer-accessories-store/qa', $render);
+    }
+
     public function test_local_request_without_forwarded_headers_remains_http(): void
     {
         Route::get('/deployment-local-url-probe', fn () => response()->json([
@@ -350,6 +400,11 @@ class DeploymentReadinessTest extends TestCase
             'cache.default' => 'database',
             'queue.default' => 'sync',
             'deployment.run_migrations' => false,
+            'product-images.driver' => 'cloudinary',
+            'product-images.cloudinary.cloud_name' => 'deployment-test-cloud',
+            'product-images.cloudinary.api_key' => 'deployment-test-key',
+            'product-images.cloudinary.api_secret' => 'deployment-test-secret',
+            'product-images.cloudinary.folder' => 'computer-accessories-store/production',
             'filesystems.default' => 'public',
             'services.vnpay.terminal_code' => null,
             'services.vnpay.hash_secret' => null,

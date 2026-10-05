@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Contracts\ProductImageStorageResolver;
 use App\Contracts\VnPayRefundTransport;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\CartItem;
+use App\Services\ProductImageStorageManager;
 use App\Services\VnPayRefundGateway;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -18,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(VnPayRefundTransport::class, VnPayRefundGateway::class);
+        $this->app->singleton(ProductImageStorageResolver::class, ProductImageStorageManager::class);
     }
 
     public function boot(): void

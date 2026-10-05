@@ -13,7 +13,8 @@ class ProductImageFactory extends Factory
     {
         return [
             'product_id' => Product::factory(),
-            'path' => 'products/test/'.fake()->uuid().'.jpg',
+            'storage_provider' => 'local',
+            'path' => fn (array $attributes): string => 'products/'.$attributes['product_id'].'/'.fake()->uuid().'.jpg',
             'alt_text' => fake()->sentence(4),
             'is_primary' => false,
             'sort_order' => 0,

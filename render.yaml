@@ -52,5 +52,15 @@ services:
         value: sync
       - key: FILESYSTEM_DISK
         value: public
+      - key: PRODUCT_IMAGE_DRIVER
+        value: cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: computer-accessories-store/production
       - key: RUN_MIGRATIONS
         value: "false"

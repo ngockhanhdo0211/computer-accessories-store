@@ -24,7 +24,7 @@ class InventoryController extends Controller
     public function index(InventoryIndexRequest $request): View|RedirectResponse
     {
         $filters = $request->validated();
-        $query = Product::query()->with(['primaryImage:id,product_id,path,alt_text'])->search($filters['search'] ?? null);
+        $query = Product::query()->with(['primaryImage:id,product_id,storage_provider,path,cloudinary_public_id,secure_url,width,height,bytes,format,alt_text'])->search($filters['search'] ?? null);
         match ($filters['stock'] ?? null) {
             'out' => $query->where('sellable_quantity', 0),
             'low' => $query->where('sellable_quantity', '>', 0)->whereColumn('sellable_quantity', '<=', 'low_stock_threshold'),
@@ -46,7 +46,7 @@ class InventoryController extends Controller
 
     public function history(Product $product): View
     {
-        $product->load('primaryImage:id,product_id,path,alt_text');
+        $product->load('primaryImage:id,product_id,storage_provider,path,cloudinary_public_id,secure_url,width,height,bytes,format,alt_text');
         $transactions = InventoryTransaction::query()->where('product_id', $product->id)
             ->with(['actor:id,name'])->latest('created_at')->latest('id')->paginate(20);
 

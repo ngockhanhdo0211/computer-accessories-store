@@ -2,15 +2,20 @@
 
 namespace App\Actions;
 
+use App\Contracts\ProductImageStorageResolver;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Support\ProductImageStorageKey;
+use App\ValueObjects\StoredProductImage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Throwable;
 
 class DeleteProductImage
 {
+    public function __construct(private readonly ProductImageStorageResolver $storage) {}
+
     public function handle(Product $product, ProductImage $image): void
     {
         DB::transaction(function () use ($product, $image) {
@@ -21,7 +26,12 @@ class DeleteProductImage
                 ->lockForUpdate()
                 ->firstOrFail();
             $imageId = (int) $target->getKey();
-            $path = $target->path;
+            $storedImage = $target->storedImage();
+            if ($storedImage->provider === 'cloudinary'
+                && (! is_string($storedImage->cloudinaryPublicId)
+                    || ! ProductImageStorageKey::ownsCloudinaryId((int) $locked->getKey(), $storedImage->cloudinaryPublicId))) {
+                throw new RuntimeException('Unsafe Cloudinary Product image identity.');
+            }
             $wasPrimary = $target->is_primary;
             $target->delete();
 
@@ -35,41 +45,25 @@ class DeleteProductImage
                 ]);
             }
 
-            DB::afterCommit(fn () => $this->deleteOwnedFile((int) $locked->getKey(), $imageId, $path));
+            DB::afterCommit(fn () => $this->cleanup((int) $locked->getKey(), $imageId, $storedImage));
         }, 3);
     }
 
-    private function isOwnedPath(int $productId, string $path): bool
+    private function cleanup(int $productId, int $imageId, StoredProductImage $image): void
     {
-        $prefix = "products/{$productId}/";
-        $filename = str_starts_with($path, $prefix) ? substr($path, strlen($prefix)) : '';
-
-        return $filename !== ''
-            && ! str_contains($filename, '/')
-            && ! str_contains($filename, '\\')
-            && ! str_contains($filename, "\0")
-            && ! in_array($filename, ['.', '..'], true);
-    }
-
-    private function deleteOwnedFile(int $productId, int $imageId, string $path): void
-    {
-        if (! $this->isOwnedPath($productId, $path)) {
-            Log::warning('Skipped unsafe Product image cleanup path.', compact('productId', 'imageId', 'path'));
-
-            return;
-        }
-
         try {
-            $disk = Storage::disk('public');
-
-            if ($disk->exists($path) && ! $disk->delete($path)) {
-                Log::warning('Product image file cleanup failed after metadata deletion.', compact('productId', 'imageId', 'path'));
-            }
+            $this->storage->forProvider($image->provider)->delete($productId, $image);
         } catch (Throwable $exception) {
-            Log::warning('Product image file cleanup threw after metadata deletion.', [
-                ...compact('productId', 'imageId', 'path'),
+            Log::error('Product image cleanup failed after metadata deletion.', [
+                'product_id' => $productId,
+                'image_id' => $imageId,
+                'provider' => $image->provider,
+                'cloudinary_public_id' => $image->provider === 'cloudinary' ? $image->cloudinaryPublicId : null,
                 'exception' => $exception::class,
             ]);
+            if ($image->provider === 'cloudinary') {
+                throw new RuntimeException('Cloud image cleanup requires reconciliation.', previous: $exception);
+            }
         }
     }
 }

@@ -26,7 +26,8 @@ class ProductDatabaseTest extends TestCase
             'damaged_quantity', 'sold_quantity', 'created_at', 'updated_at',
         ]));
         $this->assertTrue(Schema::hasColumns('product_images', [
-            'id', 'product_id', 'path', 'alt_text', 'is_primary', 'sort_order', 'created_at', 'updated_at',
+            'id', 'product_id', 'storage_provider', 'path', 'cloudinary_public_id', 'secure_url',
+            'width', 'height', 'bytes', 'format', 'alt_text', 'is_primary', 'sort_order', 'created_at', 'updated_at',
         ]));
 
         $product = Product::factory()->create();
@@ -42,6 +43,7 @@ class ProductDatabaseTest extends TestCase
         $this->assertSame(0, $product->sold_quantity);
         $this->assertIsInt($product->price_vnd);
         $this->assertTrue($image->fresh()->is_primary);
+        $this->assertStringStartsWith('products/'.$product->id.'/', ProductImage::factory()->for($product)->create()->path);
         $this->assertSame('/storage/products/'.$product->id.'/photo%20name.jpg', $image->url());
         $this->assertTrue($product->category->is($product->category));
         $this->assertTrue($product->brand->is($product->brand));
@@ -148,14 +150,14 @@ class ProductDatabaseTest extends TestCase
         ] as $constraint) {
             $this->assertStringContainsString($constraint, $productsSql);
         }
-        foreach (['product_images_is_primary_check', 'product_images_sort_order_check'] as $constraint) {
+        foreach (['product_images_is_primary_check', 'product_images_sort_order_check', 'product_images_storage_shape_check'] as $constraint) {
             $this->assertStringContainsString($constraint, $imagesSql);
         }
         foreach ([
             'products_sku_unique', 'products_slug_unique', 'products_category_visibility_id_index',
             'products_brand_visibility_id_index', 'products_visibility_created_id_index',
             'products_visibility_price_id_index', 'product_images_product_id_path_unique',
-            'product_images_product_primary_sort_index',
+            'product_images_product_primary_sort_index', 'product_images_cloudinary_public_id_unique',
         ] as $index) {
             $this->assertContains($index, $indexes);
         }
@@ -204,6 +206,46 @@ class ProductDatabaseTest extends TestCase
         $imageMigration->up();
         $this->assertTrue(Schema::hasTable('products'));
         $this->assertTrue(Schema::hasTable('product_images'));
+    }
+
+    public function test_cloudinary_metadata_migration_down_up_preserves_local_rows_and_blocks_cloud_rows(): void
+    {
+        $product = Product::factory()->create();
+        $local = ProductImage::factory()->for($product)->create([
+            'path' => 'products/'.$product->id.'/legacy.png',
+        ]);
+        $migration = require database_path('migrations/2026_10_07_000000_add_cloudinary_storage_to_product_images.php');
+
+        $migration->down();
+        $this->assertFalse(Schema::hasColumn('product_images', 'storage_provider'));
+        $this->assertDatabaseHas('product_images', ['id' => $local->id, 'path' => $local->path]);
+
+        $migration->up();
+        $this->assertDatabaseHas('product_images', [
+            'id' => $local->id,
+            'storage_provider' => 'local',
+            'path' => $local->path,
+        ]);
+
+        DB::table('product_images')->where('id', $local->id)->update([
+            'storage_provider' => 'cloudinary',
+            'path' => null,
+            'cloudinary_public_id' => config('product-images.cloudinary.folder').'/products/'.$product->id.'/asset',
+            'secure_url' => 'https://res.cloudinary.example/asset.png',
+            'width' => 1,
+            'height' => 1,
+            'bytes' => 1,
+            'format' => 'png',
+        ]);
+
+        try {
+            $migration->down();
+            $this->fail('Expected Cloudinary rollback guard.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('Cannot remove Cloudinary', $exception->getMessage());
+        }
+        $this->assertTrue(Schema::hasColumn('product_images', 'storage_provider'));
+        $this->assertDatabaseHas('product_images', ['id' => $local->id, 'storage_provider' => 'cloudinary']);
     }
 
     private function row(int $categoryId, int $brandId): array

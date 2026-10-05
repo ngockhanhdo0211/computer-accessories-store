@@ -23,7 +23,7 @@ class ProductController extends Controller
     {
         $filters = $request->validated();
         $products = Product::query()
-            ->with(['category:id,name,slug', 'brand:id,name,slug', 'primaryImage:id,product_id,path,alt_text'])
+            ->with(['category:id,name,slug', 'brand:id,name,slug', 'primaryImage:id,product_id,storage_provider,path,cloudinary_public_id,secure_url,width,height,bytes,format,alt_text'])
             ->search($filters['search'] ?? null)
             ->forCategory($filters['category'] ?? null)
             ->forBrand($filters['brand'] ?? null)

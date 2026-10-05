@@ -2,17 +2,21 @@
 
 namespace App\Actions;
 
+use App\Contracts\ProductImageStorageResolver;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Support\ProductImageStorageKey;
+use App\ValueObjects\StoredProductImage;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class DeleteProduct
 {
+    public function __construct(private readonly ProductImageStorageResolver $storage) {}
+
     public function handle(Product $product): void
     {
         try {
@@ -20,12 +24,20 @@ class DeleteProduct
                 $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
                 $productId = (int) $locked->getKey();
                 $images = ProductImage::query()->where('product_id', $productId)->lockForUpdate()->get();
-                $paths = $images->pluck('path')->all();
+                $storedImages = $images->map->storedImage()->all();
+
+                foreach ($storedImages as $storedImage) {
+                    if ($storedImage->provider === 'cloudinary'
+                        && (! is_string($storedImage->cloudinaryPublicId)
+                            || ! ProductImageStorageKey::ownsCloudinaryId($productId, $storedImage->cloudinaryPublicId))) {
+                        throw new \RuntimeException('Unsafe Cloudinary Product image identity.');
+                    }
+                }
 
                 ProductImage::query()->where('product_id', $productId)->delete();
                 $locked->delete();
 
-                DB::afterCommit(fn () => $this->deleteOwnedFiles($productId, $paths));
+                DB::afterCommit(fn () => $this->deleteStoredImages($productId, $storedImages));
             }, 3);
         } catch (QueryException $exception) {
             if ($this->isProductForeignKeyViolation($exception)) {
@@ -52,49 +64,29 @@ class DeleteProduct
         };
     }
 
-    private function isOwnedPath(int $productId, string $path): bool
+    /** @param array<int, StoredProductImage> $images */
+    private function deleteStoredImages(int $productId, array $images): void
     {
-        $prefix = "products/{$productId}/";
-        $filename = str_starts_with($path, $prefix) ? substr($path, strlen($prefix)) : '';
+        $cloudinaryCleanupFailed = false;
 
-        return $filename !== ''
-            && ! str_contains($filename, '/')
-            && ! str_contains($filename, '\\')
-            && ! str_contains($filename, "\0")
-            && ! in_array($filename, ['.', '..'], true);
-    }
-
-    /** @param array<int, string> $paths */
-    private function deleteOwnedFiles(int $productId, array $paths): void
-    {
-        try {
-            $disk = Storage::disk('public');
-        } catch (Throwable $exception) {
-            Log::warning('Product file cleanup disk is unavailable after deletion.', [
-                'productId' => $productId,
-                'exception' => $exception::class,
-            ]);
-
-            return;
-        }
-
-        foreach ($paths as $path) {
-            if (! $this->isOwnedPath($productId, $path)) {
-                Log::warning('Skipped unsafe Product cleanup path.', compact('productId', 'path'));
-
-                continue;
-            }
-
+        foreach ($images as $image) {
             try {
-                if ($disk->exists($path) && ! $disk->delete($path)) {
-                    Log::warning('Product file cleanup failed after product deletion.', compact('productId', 'path'));
-                }
+                $this->storage->forProvider($image->provider)->delete($productId, $image);
             } catch (Throwable $exception) {
-                Log::warning('Product file cleanup threw after product deletion.', [
-                    ...compact('productId', 'path'),
+                Log::error('Product image cleanup failed after product deletion.', [
+                    'product_id' => $productId,
+                    'provider' => $image->provider,
+                    'cloudinary_public_id' => $image->provider === 'cloudinary' ? $image->cloudinaryPublicId : null,
                     'exception' => $exception::class,
                 ]);
+                if ($image->provider === 'cloudinary') {
+                    $cloudinaryCleanupFailed = true;
+                }
             }
+        }
+
+        if ($cloudinaryCleanupFailed) {
+            throw new \RuntimeException('One or more Cloud image cleanups require reconciliation.');
         }
     }
 }

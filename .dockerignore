@@ -4,6 +4,10 @@
 .codex
 .env
 .env.*
+cloudinary-*.env
+**/cloudinary-*.env
+*.pem
+**/*.pem
 !.env.example
 vendor
 node_modules

@@ -69,7 +69,10 @@ Chỉ nhập giá trị thật trong Render Dashboard. Không ghi chúng vào Gi
 | `SESSION_SAME_SITE` | `lax` hoặc `strict`; hiện chọn `lax`. |
 | `CACHE_STORE` | `database`; migrations `cache` và `cache_locks` đã tồn tại. |
 | `QUEUE_CONNECTION` | `sync`; checkpoint này không có worker. |
-| `FILESYSTEM_DISK` | Tạm thời `public` để smoke test; đây là ephemeral storage, không production-ready. |
+| `FILESYSTEM_DISK` | `public` chỉ còn phục vụ local legacy/static workflow; Product upload production không phụ thuộc filesystem Render. |
+| `PRODUCT_IMAGE_DRIVER` | Bắt buộc `cloudinary` trong production. Local/test mặc định `local`. |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Credential Cloudinary, nhập bằng secret variables trong Render Dashboard; không ghi vào Blueprint/Git. |
+| `CLOUDINARY_FOLDER` | Bắt buộc đúng `computer-accessories-store/production`; QA dùng folder riêng ngoài production. |
 | `RUN_MIGRATIONS` | Mặc định `false`; chỉ `true` theo migration plan đã duyệt. |
 | `VNPAY_PAYMENT_URL`, `VNPAY_TERMINAL_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` | VNPay Sandbox hiện có. Return URL phải là URL HTTPS Render cộng `/checkout/vnpay/return`. |
 | `VNPAY_REFUND_URL`, `VNPAY_REFUND_CREATE_BY`, `VNPAY_REFUND_IP_ADDRESS` | Refund Sandbox hiện có, chỉ cấu hình khi demo VNPay/refund. |
@@ -90,7 +93,7 @@ Checkpoint 2 đã được kiểm tra trên một database QA rỗng, tách bi�
 
 Khác biệt dialect duy nhất cần sửa là biểu thức chính quy phân biệt hoa/thường trong CHECK: MariaDB 10.4 giữ `REGEXP BINARY`, còn MySQL 8.4 dùng `REGEXP_LIKE(..., ..., 'c')`. Hai nhánh giữ cùng pattern và không làm yếu constraint. SQLite tiếp tục dùng nhánh trigger/CHECK hiện có.
 
-Cloudinary và Google variables sẽ được bổ sung ở checkpoint tương ứng; hiện chưa có code nên không thêm secret placeholder.
+Checkpoint 3 đã bổ sung Cloudinary variables. `app:validate-production` fail-closed nếu driver không phải Cloudinary, credential thiếu/placeholder hoặc folder không đúng production; output chỉ nêu tên biến lỗi. Google variables vẫn thuộc checkpoint sau.
 
 ## 5. Startup contract
 
@@ -125,18 +128,15 @@ Không bật migration tự động trong checkpoint này. Khi nhiều container
 - Log production đi `stderr`; `APP_DEBUG=false` để HTTP exception không lộ stack, SQL hoặc config.
 - Không log password, application key, DB/VNPay secrets, session/CSRF token hay nội dung Support Chat.
 
-## 8. Storage contract tạm thời
+## 8. Product image storage contract
 
-Upload Product hiện dùng local public disk. Render Free sẽ xóa file upload khi sleep, restart hoặc redeploy. Vì vậy:
+Production dùng Cloudinary; browser gửi file tới Laravel và Laravel kiểm tra MIME/nội dung, format và giới hạn 5 MB trước khi signed upload bằng SDK chính thức. Public ID do server sinh dưới `computer-accessories-store/production/products/{product_id}/`; tối đa 8 ảnh/Product. Database chỉ lưu metadata cần render và đối soát, không lưu credential hay signature.
 
-- static assets trong repository vẫn dùng bình thường;
-- Docker image không copy hai ảnh Product development;
-- không upload/xóa ảnh Product khi demo trên Render;
-- không tuyên bố Product image upload production-ready;
-- không tạo persistent disk vì Free Web Service không hỗ trợ;
-- live demo có upload chỉ được phép sau Cloudinary checkpoint.
+Local/test tiếp tục dùng public disk và row local cũ vẫn render bình thường. Không tự migrate hai ảnh development lên cloud. Render không cần persistent disk cho Product upload; static assets trong repository vẫn hoạt động. Khi upload nhiều ảnh hoặc ghi DB thất bại, các asset đã tạo được cleanup. Xóa chỉ tác động asset thuộc đúng Product folder; kết quả `not found` được coi là idempotent, còn lỗi chưa xác nhận phải được log đã khử bí mật và đưa vào reconciliation thay vì giả thành công.
 
-Startup giữ symlink an toàn để smoke test nhưng không biến local disk thành persistent storage.
+Rollback migration metadata chỉ được phép khi không còn row/metadata Cloudinary. Trước rollback production phải chuyển dữ liệu có chủ đích và xác minh asset lifecycle; không dùng rollback để xóa metadata đang tham chiếu asset thật.
+
+Cloudinary Free có quota storage, bandwidth và transformation theo tài khoản; theo dõi usage trong Dashboard và không coi Free tier là cam kết SLA/backup. Sau deploy, smoke test bằng một Product thử nghiệm được phép: upload ảnh, xác minh URL HTTPS tải đúng MIME, đổi primary/reorder rồi xóa ảnh/Product; cuối cùng kiểm tra asset không còn trong đúng folder Product. Không duyệt hoặc xóa asset ngoài prefix vừa tạo. Khi rollback application, giữ nguyên Cloudinary asset và schema cho tới khi phiên bản cũ đã được xác nhận hiểu metadata; rollback code không đồng nghĩa xóa asset.
 
 ## 9. Scheduler và reservation cleanup
 
