@@ -22,6 +22,8 @@ da_dat ────────────────> cho_chuyen_phat ──�
 
 **Trạng thái triển khai hiện tại:** Order Transit Progression Phase 1 và COD Order Terminal Lifecycle đã mở các cạnh đã chốt. Customer Cancellation Request cho Order `da_dat` đã có submit/review; approval COD hoặc VNPay là một transaction nhưng VNPay chỉ tạo Refund `pending`, chưa gọi gateway. VNPay Callback/IPN và Refund Processing/Manual Reconciliation tiếp tục xử lý ở boundary riêng.
 
+Customer Cancellation Request `pending` là một chốt vận hành trên Order: transition, staff cancellation hoặc delivery tiếp theo phải đợi request được xử lý. Các writer khóa thống nhất theo thứ tự actor → Order → cancellation request. Dữ liệu drift cũ có request pending trong khi Order đã rời `da_dat` chỉ được reject với ghi chú bắt buộc; không tự reject, không approve và không thay đổi inventory/payment/Coupon/Refund/Membership khi đóng request này.
+
 **Return Inspection Foundation:** Đã có chứng từ hai giai đoạn theo từng Order Item. Employee/Admin active được tiếp nhận và hoàn tất kiểm tra ở `da_dat`/`cho_chuyen_phat`; chỉ Admin active được thao tác ở `dang_trung_chuyen`. Foundation chỉ ghi bằng chứng và audit, chưa đổi Order sang `da_huy`, chưa hoàn kho hay tạo inventory transaction.
 
 ## Hiệu ứng khi chuyển trạng thái

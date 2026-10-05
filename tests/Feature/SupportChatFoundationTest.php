@@ -323,6 +323,37 @@ class SupportChatFoundationTest extends TestCase
         $this->assertDatabaseMissing('support_conversation_reads', ['conversation_id' => $conversation->id, 'user_id' => $admin->id]);
     }
 
+    public function test_customer_admin_and_employee_composers_render_complete_contract_for_open_and_closed_conversations(): void
+    {
+        $customer = User::factory()->create();
+        $employee = User::factory()->employee()->create();
+        $admin = User::factory()->admin()->create();
+        $conversation = $this->send($customer, null, 'Cần hỗ trợ')->conversation;
+
+        $this->actingAs($customer)->get(route('support.show'))->assertOk()
+            ->assertSee('data-support-form', false)
+            ->assertSee('name="_token"', false)
+            ->assertSee('name="client_message_key"', false)
+            ->assertSee('name="content"', false)
+            ->assertSee('type="submit">Gửi tin nhắn', false);
+
+        foreach ([[$employee, 'employee'], [$admin, 'admin']] as [$staff, $prefix]) {
+            $this->actingAs($staff)->get(route($prefix.'.support.show', $conversation))->assertOk()
+                ->assertSee('data-workspace-thread', false)
+                ->assertSee('class="support-composer"', false)
+                ->assertSee('name="_token"', false)
+                ->assertSee('name="client_message_key"', false)
+                ->assertSee('name="content"', false)
+                ->assertSee('type="submit">Gửi phản hồi', false);
+        }
+
+        app(CloseSupportConversation::class)->handle($conversation, $admin, (string) Str::uuid());
+        $closed = $this->actingAs($employee)->get(route('employee.support.show', $conversation))->assertOk()
+            ->assertSee('Tin nhắn mới sẽ tự mở lại hội thoại đã đóng.')
+            ->assertSee('type="submit">Gửi phản hồi', false);
+        $this->assertMatchesRegularExpression('/name="client_message_key" value="[0-9a-f-]{36}"/', $closed->getContent());
+    }
+
     public function test_validation_role_status_routes_and_polling_ui_contract_are_explicit(): void
     {
         $customer = User::factory()->create();
@@ -366,6 +397,10 @@ class SupportChatFoundationTest extends TestCase
         $this->assertStringContainsString('5000', $javascript);
         $this->assertStringContainsString('event.isComposing', $javascript);
         $this->assertStringContainsString("catchUp = mode === 'new' && data.has_more === true", $javascript);
+        $stylesheet = file_get_contents(resource_path('css/app.css'));
+        $this->assertStringContainsString('grid-template-rows: auto minmax(0, 1fr) auto auto auto', $stylesheet);
+        $this->assertStringNotContainsString('grid-template-rows: auto minmax(18rem, 1fr) auto auto', $stylesheet);
+        $this->assertMatchesRegularExpression('/\.support-inbox\s*\{[^}]*overflow-y:\s*auto/s', $stylesheet);
         $this->actingAs($customer)->get(route('support.show'))->assertOk()
             ->assertSee('aria-expanded="false"', false)->assertSee('aria-live="polite"', false);
     }

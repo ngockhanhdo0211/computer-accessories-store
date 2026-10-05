@@ -84,12 +84,12 @@
 
     <div class="admin-dashboard__lower">
         <section class="admin-dashboard__roadmap" aria-labelledby="roadmap-title">
-            <h2 id="roadmap-title">Các phần tiếp theo</h2>
-            <p>Những module này chưa có dữ liệu để thống kê.</p>
+            <h2 id="roadmap-title">Trạng thái nghiệp vụ</h2>
+            <p>Các luồng đã sẵn sàng trong workspace và phần còn lại của lộ trình.</p>
             <ul>
-                @foreach (['Xử lý vòng đời đơn', 'Thanh toán VNPay', 'Đánh giá'] as $module)
-                    <li><span>{{ $module }}</span><span>Chưa triển khai</span></li>
-                @endforeach
+                <li><span>Vòng đời đơn hàng</span><span>Đã triển khai</span></li>
+                <li><span>VNPay: khởi tạo, callback và hoàn tiền</span><span>Đã triển khai</span></li>
+                <li><span>Đánh giá sản phẩm</span><span>Chưa triển khai</span></li>
             </ul>
         </section>
 

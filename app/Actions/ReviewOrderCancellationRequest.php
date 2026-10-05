@@ -55,8 +55,13 @@ class ReviewOrderCancellationRequest
                     || UserStatus::tryFrom((string) $reviewer->getRawOriginal('status')) !== UserStatus::Active) {
                     throw ValidationException::withMessages(['authorization' => 'Tài khoản không có quyền xử lý yêu cầu hủy.']);
                 }
+                // Every cancellation writer locks actor -> order -> request. Keeping
+                // one order prevents transition/review races from deadlocking.
+                $order = Order::query()->lockForUpdate()->findOrFail($request->order_id);
                 $locked = OrderCancellationRequest::query()->lockForUpdate()->findOrFail($request->id);
-                $order = Order::query()->lockForUpdate()->findOrFail($locked->order_id);
+                if ($locked->order_id !== $order->id) {
+                    throw ValidationException::withMessages(['request' => 'Yêu cầu hủy không còn khớp Order.']);
+                }
                 if ($locked->review_event_key !== null) {
                     if ($locked->review_event_key !== $validated['event_key'] || $locked->review_fingerprint !== $fingerprint) {
                         throw ValidationException::withMessages(['event_key' => 'Yêu cầu đã được xử lý bằng nội dung khác.']);

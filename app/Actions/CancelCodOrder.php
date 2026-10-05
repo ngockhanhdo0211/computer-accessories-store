@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Actions\Concerns\GuardsPendingOrderCancellation;
 use App\Enums\CouponUsageStatus;
 use App\Enums\InventoryTransactionType;
 use App\Enums\OrderStatus;
@@ -28,6 +29,8 @@ use Illuminate\Validation\ValidationException;
 
 class CancelCodOrder
 {
+    use GuardsPendingOrderCancellation;
+
     private const MAX_PRODUCT_QUANTITY = 4_294_967_295;
 
     public function __construct(private readonly OrderHasCompletedReturnInspections $readiness) {}
@@ -66,6 +69,7 @@ class CancelCodOrder
                     return $order;
                 }
 
+                $this->assertNoPendingCancellationRequest($order);
                 $this->assertCancellationAllowed($order, $currentActor);
                 if ($history->to_status !== $order->status) {
                     throw ValidationException::withMessages(['order' => 'Lịch sử trạng thái không khớp Order. Vui lòng đối soát trước khi hủy.']);

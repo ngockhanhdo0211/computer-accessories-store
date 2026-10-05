@@ -47,20 +47,21 @@
                     <p class="section-label">Tiến trình vận chuyển</p>
                     <h2 id="order-transition-title">Bước tiếp theo</h2>
                     <p>Chuyển từ <strong>{{ $order->status->label() }}</strong> sang <strong>{{ $nextStatus->label() }}</strong>.</p>
-                    @if($errors->hasAny(['authorization', 'target_status', 'event_key', 'reason']))
+                    @if($errors->hasAny(['authorization', 'cancellation_request', 'target_status', 'event_key', 'reason']))
                         <div class="alert alert--error order-transition__error" role="alert">Không thể cập nhật tiến trình. Hãy kiểm tra thông tin bên dưới.</div>
                     @endif
                     <form method="POST" action="{{ route($transitionRoute, $order->order_code) }}">
                         @csrf
                         @method('PATCH')
                         <input type="hidden" name="target_status" value="{{ $nextStatus->value }}">
-                        <input type="hidden" name="event_key" value="{{ $errors->has('event_key') || !$errors->hasAny(['authorization', 'target_status', 'event_key', 'reason']) ? (string) \Illuminate\Support\Str::uuid() : old('event_key', (string) \Illuminate\Support\Str::uuid()) }}">
+                        <input type="hidden" name="event_key" value="{{ $errors->has('event_key') || !$errors->hasAny(['authorization', 'cancellation_request', 'target_status', 'event_key', 'reason']) ? (string) \Illuminate\Support\Str::uuid() : old('event_key', (string) \Illuminate\Support\Str::uuid()) }}">
                         @error('authorization')<p class="field-error" role="alert">{{ $message }}</p>@enderror
+                        @error('cancellation_request')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                         @error('target_status')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                         @error('event_key')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                         <div class="field">
                             <label for="reason">Ghi chú vận hành <span>(không bắt buộc)</span></label>
-                            <textarea id="reason" name="reason" rows="3" maxlength="500" aria-describedby="reason-message" @error('reason') aria-invalid="true" @enderror>{{ $errors->hasAny(['authorization', 'target_status', 'event_key', 'reason']) ? old('reason') : '' }}</textarea>
+                            <textarea id="reason" name="reason" rows="3" maxlength="500" aria-describedby="reason-message" @error('reason') aria-invalid="true" @enderror>{{ $errors->hasAny(['authorization', 'cancellation_request', 'target_status', 'event_key', 'reason']) ? old('reason') : '' }}</textarea>
                             <p id="reason-message" class="field-message @error('reason') field-error @enderror">@error('reason'){{ $message }}@else Ghi lại thông tin bàn giao hữu ích cho lịch sử đơn. @enderror</p>
                         </div>
                         <button class="button" type="submit">{{ $transitionLabel }}</button>
@@ -81,7 +82,7 @@
                             @if($errors->deliverOrder->any())
                                 <div class="alert alert--error order-transition__error" role="alert">Không thể xác nhận giao đơn. Hãy kiểm tra thông tin bên dưới.</div>
                             @endif
-                            @foreach(['authorization', 'order', 'inventory', 'event_key', 'request'] as $field)
+                            @foreach(['authorization', 'cancellation_request', 'order', 'inventory', 'event_key', 'request'] as $field)
                                 @error($field, 'deliverOrder')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                             @endforeach
                             <div class="field">
@@ -108,7 +109,7 @@
                                 @if($errors->cancelOrder->any())
                                     <div class="alert alert--error order-transition__error" role="alert">Không thể hủy đơn. Hãy kiểm tra thông tin bên dưới.</div>
                                 @endif
-                                @foreach(['authorization', 'order', 'inspection', 'inventory', 'coupon_usage', 'event_key', 'request'] as $field)
+                                @foreach(['authorization', 'cancellation_request', 'order', 'inspection', 'inventory', 'coupon_usage', 'event_key', 'request'] as $field)
                                     @error($field, 'cancelOrder')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                                 @endforeach
                                 <div class="field">

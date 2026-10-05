@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Actions\Concerns\GuardsPendingOrderCancellation;
 use App\Enums\OrderStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
@@ -16,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class TransitionOrderStatus
 {
+    use GuardsPendingOrderCancellation;
+
     public function handle(string $orderCode, User $actor, OrderStatus $target, string $eventKey, ?string $reason = null): Order
     {
         $this->assertActor($actor);
@@ -75,6 +78,8 @@ class TransitionOrderStatus
 
                     return $order;
                 }
+
+                $this->assertNoPendingCancellationRequest($order);
 
                 $expectedTarget = match ($current) {
                     OrderStatus::Placed => OrderStatus::AwaitingHandoff,

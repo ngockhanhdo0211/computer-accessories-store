@@ -112,6 +112,64 @@ class MariaDbCustomerOrderCancellationConcurrencyTest extends TestCase
         }
     }
 
+    public function test_transition_submit_approve_reject_and_two_staff_reject_races_serialize_safely(): void
+    {
+        $employee = User::factory()->employee()->create();
+        $admin = User::factory()->admin()->create();
+
+        [$submitOrder, $submitCustomer] = $this->order();
+        $submitKey = (string) Str::uuid();
+        $submitRace = $this->codes($this->runTwo(
+            ['operation' => 'transition', 'order_id' => $submitOrder->id, 'actor_id' => $employee->id,
+                'key' => (string) Str::uuid(), 'target' => OrderStatus::AwaitingHandoff->value],
+            ['operation' => 'submit', 'order_id' => $submitOrder->id, 'actor_id' => $submitCustomer->id,
+                'key' => $submitKey, 'reason' => 'Race submit'],
+        ));
+        $this->assertSame([0, 2], $submitRace);
+        $submitted = OrderCancellationRequest::query()->where('order_id', $submitOrder->id)->first();
+        if ($submitted === null) {
+            $this->assertSame(OrderStatus::AwaitingHandoff, $submitOrder->fresh()->status);
+        } else {
+            $this->assertSame(OrderCancellationRequestStatus::Pending, $submitted->status);
+            $this->assertSame(OrderStatus::Placed, $submitOrder->fresh()->status);
+        }
+
+        [$approveOrder, $approveCustomer] = $this->order();
+        $approveRequest = app(SubmitOrderCancellationRequest::class)->handle($approveCustomer, $approveOrder->order_code, (string) Str::uuid(), 'Race approve');
+        $this->assertSame([0, 2], $this->codes($this->runTwo(
+            ['operation' => 'transition', 'order_id' => $approveOrder->id, 'actor_id' => $employee->id,
+                'key' => (string) Str::uuid(), 'target' => OrderStatus::AwaitingHandoff->value],
+            ['operation' => 'review', 'request_id' => $approveRequest->id, 'actor_id' => $admin->id,
+                'key' => (string) Str::uuid(), 'decision' => 'approved', 'note' => null],
+        )));
+        $this->assertSame(OrderCancellationRequestStatus::Approved, $approveRequest->fresh()->status);
+        $this->assertSame(OrderStatus::Cancelled, $approveOrder->fresh()->status);
+
+        [$rejectOrder, $rejectCustomer] = $this->order();
+        $rejectRequest = app(SubmitOrderCancellationRequest::class)->handle($rejectCustomer, $rejectOrder->order_code, (string) Str::uuid(), 'Race reject');
+        $rejectRace = $this->codes($this->runTwo(
+            ['operation' => 'transition', 'order_id' => $rejectOrder->id, 'actor_id' => $employee->id,
+                'key' => (string) Str::uuid(), 'target' => OrderStatus::AwaitingHandoff->value],
+            ['operation' => 'review', 'request_id' => $rejectRequest->id, 'actor_id' => $admin->id,
+                'key' => (string) Str::uuid(), 'decision' => 'rejected', 'note' => 'Đóng request trước khi xử lý'],
+        ));
+        $this->assertContains($rejectRace, [[0, 0], [0, 2]]);
+        $this->assertSame(OrderCancellationRequestStatus::Rejected, $rejectRequest->fresh()->status);
+        $this->assertContains($rejectOrder->fresh()->status, [OrderStatus::Placed, OrderStatus::AwaitingHandoff]);
+
+        [$staffOrder, $staffCustomer] = $this->order();
+        $staffRequest = app(SubmitOrderCancellationRequest::class)->handle($staffCustomer, $staffOrder->order_code, (string) Str::uuid(), 'Hai staff reject');
+        $this->assertSame([0, 2], $this->codes($this->runTwo(
+            ['operation' => 'review', 'request_id' => $staffRequest->id, 'actor_id' => $employee->id,
+                'key' => (string) Str::uuid(), 'decision' => 'rejected', 'note' => 'Employee đóng'],
+            ['operation' => 'review', 'request_id' => $staffRequest->id, 'actor_id' => $admin->id,
+                'key' => (string) Str::uuid(), 'decision' => 'rejected', 'note' => 'Admin đóng'],
+        )));
+        $this->assertSame(OrderCancellationRequestStatus::Rejected, $staffRequest->fresh()->status);
+        $this->assertSame(1, AuditLog::query()->where('subject_type', OrderCancellationRequest::class)
+            ->where('subject_id', $staffRequest->id)->where('action', 'order.cancellation_rejected')->count());
+    }
+
     /** @return array{Order, User, OrderItem, Product} */
     private function order(): array
     {
@@ -139,6 +197,14 @@ try {
     if ($payload['operation'] === 'submit') {
         $order = App\Models\Order::query()->findOrFail($payload['order_id']);
         app(App\Actions\SubmitOrderCancellationRequest::class)->handle($actor, $order->order_code, $payload['key'], $payload['reason']);
+    } elseif ($payload['operation'] === 'transition') {
+        $order = App\Models\Order::query()->findOrFail($payload['order_id']);
+        app(App\Actions\TransitionOrderStatus::class)->handle(
+            $order->order_code,
+            $actor,
+            App\Enums\OrderStatus::from($payload['target']),
+            $payload['key'],
+        );
     } else {
         $request = App\Models\OrderCancellationRequest::query()->findOrFail($payload['request_id']);
         app(App\Actions\ReviewOrderCancellationRequest::class)->handle($request, $actor, $payload['key'], $payload['decision'], $payload['note']);

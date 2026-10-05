@@ -45,7 +45,8 @@ class ManagedOrderCancellationRequestController extends Controller
         return view('managed-cancellation-requests.show', [
             'cancellationRequest' => $cancellationRequest,
             'routePrefix' => $this->prefix($request),
-            'canReview' => $validOrder && $validPayment,
+            'canApprove' => $validOrder && $validPayment,
+            'isDrifted' => $cancellationRequest->status === OrderCancellationRequestStatus::Pending && ! $validOrder,
         ]);
     }
 

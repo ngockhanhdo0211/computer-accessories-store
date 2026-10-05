@@ -46,6 +46,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Customer cancellation QA migration failed.' }
 
     & php artisan migrate:rollback --step=1 --force
+    if ($LASTEXITCODE -ne 0) { throw 'Cloudinary Product Image migration rollback before Customer cancellation QA failed.' }
+
+    & php artisan migrate:rollback --step=1 --force
     if ($LASTEXITCODE -ne 0) { throw 'Support Chat migration rollback before Customer cancellation QA failed.' }
 
     & php artisan migrate:rollback --step=1 --force
@@ -56,6 +59,9 @@ try {
 
     & php artisan migrate --path=database/migrations/2026_10_06_000000_create_support_chat_tables.php --force
     if ($LASTEXITCODE -ne 0) { throw 'Support Chat migration reapply after Customer cancellation QA failed.' }
+
+    & php artisan migrate --path=database/migrations/2026_10_07_000000_add_cloudinary_storage_to_product_images.php --force
+    if ($LASTEXITCODE -ne 0) { throw 'Cloudinary Product Image migration reapply after Customer cancellation QA failed.' }
 
     & php vendor/bin/phpunit --no-configuration tests/Feature/MariaDbCustomerOrderCancellationConcurrencyTest.php
     if ($LASTEXITCODE -ne 0) { throw 'Customer cancellation MariaDB metadata/concurrency QA failed.' }

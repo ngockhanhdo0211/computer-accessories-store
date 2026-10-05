@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Actions\CancelCodOrder;
+use App\Actions\DeliverCodOrder;
 use App\Actions\ReviewOrderCancellationRequest;
 use App\Actions\SubmitOrderCancellationRequest;
+use App\Actions\TransitionOrderStatus;
 use App\Enums\CouponUsageStatus;
 use App\Enums\InventoryTransactionType;
 use App\Enums\OrderCancellationRequestStatus;
@@ -422,6 +425,137 @@ class CustomerOrderCancellationRequestTest extends TestCase
         ]);
         $approveResponse->assertSessionHasErrors('event_key', null, 'approveCancellation')
             ->assertSessionHas('errors', fn ($errors): bool => ! $errors->hasBag('rejectCancellation'));
+    }
+
+    public function test_pending_request_blocks_order_progression_staff_cancellation_and_delivery(): void
+    {
+        [$order, $customer] = $this->codOrder();
+        $employee = User::factory()->employee()->create();
+        $admin = User::factory()->admin()->create();
+        app(SubmitOrderCancellationRequest::class)->handle($customer, $order->order_code, (string) Str::uuid(), 'Chờ quyết định');
+
+        foreach ([
+            fn () => app(TransitionOrderStatus::class)->handle($order->order_code, $employee, OrderStatus::AwaitingHandoff, (string) Str::uuid()),
+            fn () => app(CancelCodOrder::class)->handle($order->order_code, $admin, (string) Str::uuid(), 'Không được bỏ qua request'),
+        ] as $operation) {
+            try {
+                $operation();
+                $this->fail('A pending cancellation request must block Order progression.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('cancellation_request', $exception->errors());
+            }
+        }
+        $this->assertSame(OrderStatus::Placed, $order->fresh()->status);
+
+        (new OrderStatusHistory)->forceFill([
+            'order_id' => $order->id,
+            'from_status' => OrderStatus::Placed,
+            'to_status' => OrderStatus::AwaitingHandoff,
+            'actor_id' => $employee->id,
+            'reason' => 'Legacy drift fixture',
+            'event_key' => (string) Str::uuid(),
+            'created_at' => now()->addSecond(),
+        ])->save();
+        (new OrderStatusHistory)->forceFill([
+            'order_id' => $order->id,
+            'from_status' => OrderStatus::AwaitingHandoff,
+            'to_status' => OrderStatus::InTransit,
+            'actor_id' => $employee->id,
+            'reason' => 'Legacy drift fixture',
+            'event_key' => (string) Str::uuid(),
+            'created_at' => now()->addSeconds(2),
+        ])->save();
+        $order->forceFill(['status' => OrderStatus::InTransit])->save();
+
+        try {
+            app(DeliverCodOrder::class)->handle($order->order_code, $employee, (string) Str::uuid());
+            $this->fail('A drifted pending request must block delivery.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('cancellation_request', $exception->errors());
+        }
+        $this->assertSame(OrderStatus::InTransit, $order->fresh()->status);
+        $this->assertSame(PaymentStatus::Unpaid, $order->fresh()->payment_status);
+    }
+
+    public function test_drifted_pending_request_can_only_be_rejected_atomically_and_replay_is_idempotent(): void
+    {
+        [$order, $customer, $items, $products] = $this->codOrder();
+        $employee = User::factory()->employee()->create();
+        $admin = User::factory()->admin()->create();
+        $request = app(SubmitOrderCancellationRequest::class)->handle($customer, $order->order_code, (string) Str::uuid(), 'Yêu cầu đã bị drift');
+        $order->forceFill(['status' => OrderStatus::AwaitingHandoff])->save();
+        (new OrderStatusHistory)->forceFill([
+            'order_id' => $order->id, 'from_status' => OrderStatus::Placed,
+            'to_status' => OrderStatus::AwaitingHandoff, 'actor_id' => $employee->id,
+            'reason' => 'Legacy drift fixture', 'event_key' => (string) Str::uuid(), 'created_at' => now()->addSecond(),
+        ])->save();
+
+        $this->actingAs($customer)->get(route('orders.show', $order->order_code))->assertOk()
+            ->assertSee('không còn đủ điều kiện chấp thuận')
+            ->assertSee('đang chờ nhân viên đóng');
+        $managed = $this->actingAs($admin)->get(route('admin.order-cancellation-requests.show', $request))->assertOk()
+            ->assertSee('Đóng yêu cầu bằng từ chối')
+            ->assertDontSee('Chấp thuận hủy');
+        $managed->assertDontSee('action="'.route('admin.order-cancellation-requests.approve', $request).'"', false)
+            ->assertSee('action="'.route('admin.order-cancellation-requests.reject', $request).'"', false);
+
+        try {
+            app(ReviewOrderCancellationRequest::class)->handle($request, $admin, (string) Str::uuid(), 'approved', null);
+            $this->fail('A drifted request must not be approved.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('order', $exception->errors());
+        }
+
+        $eventKey = (string) Str::uuid();
+        $note = 'Order đã chuyển sang chờ chuyển phát';
+        app(ReviewOrderCancellationRequest::class)->handle($request, $admin, $eventKey, 'rejected', $note);
+        $fresh = $request->fresh();
+        $this->assertSame(OrderCancellationRequestStatus::Rejected, $fresh->status);
+        $this->assertSame($admin->id, $fresh->reviewed_by);
+        $this->assertNotNull($fresh->reviewed_at);
+        $this->assertSame($note, $fresh->review_note);
+        $this->assertSame(OrderStatus::AwaitingHandoff, $order->fresh()->status);
+        $this->assertDatabaseCount('inventory_transactions', 0);
+        $this->assertDatabaseCount('refunds', 0);
+        foreach ($products as $product) {
+            $this->assertSame(5, $product->fresh()->sellable_quantity);
+            $this->assertSame(4, $product->fresh()->sold_quantity);
+        }
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $admin->id,
+            'action' => 'order.cancellation_rejected',
+            'subject_id' => $request->id,
+            'request_id' => $eventKey,
+        ]);
+
+        app(ReviewOrderCancellationRequest::class)->handle($fresh, $admin, $eventKey, 'rejected', $note);
+        $this->assertSame(1, AuditLog::query()->where('request_id', $eventKey)->count());
+        try {
+            app(ReviewOrderCancellationRequest::class)->handle($fresh, $admin, (string) Str::uuid(), 'rejected', $note);
+            $this->fail('A different review event must conflict with terminal evidence.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('event_key', $exception->errors());
+        }
+    }
+
+    public function test_drift_rejection_rolls_back_request_and_audit_together(): void
+    {
+        [$order, $customer] = $this->codOrder();
+        $admin = User::factory()->admin()->create();
+        $request = app(SubmitOrderCancellationRequest::class)->handle($customer, $order->order_code, (string) Str::uuid(), 'Rollback drift reject');
+        $order->forceFill(['status' => OrderStatus::AwaitingHandoff])->save();
+        DB::unprepared("CREATE TRIGGER drift_reject_audit_failure BEFORE INSERT ON audit_logs WHEN NEW.action = 'order.cancellation_rejected' BEGIN SELECT RAISE(ABORT, 'forced reject audit failure'); END");
+
+        try {
+            app(ReviewOrderCancellationRequest::class)->handle($request, $admin, (string) Str::uuid(), 'rejected', 'Đóng drift');
+            $this->fail('Audit failure must roll back drift rejection.');
+        } catch (QueryException) {
+            $this->assertSame(OrderCancellationRequestStatus::Pending, $request->fresh()->status);
+            $this->assertNull($request->fresh()->reviewed_by);
+            $this->assertNull($request->fresh()->reviewed_at);
+        } finally {
+            DB::statement('DROP TRIGGER IF EXISTS drift_reject_audit_failure');
+        }
     }
 
     /** @return array{Order, User, Collection<int, OrderItem>, Collection<int, Product>} */

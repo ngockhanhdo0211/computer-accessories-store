@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Actions\Concerns\GuardsPendingOrderCancellation;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -21,6 +22,8 @@ use Illuminate\Validation\ValidationException;
 
 class DeliverCodOrder
 {
+    use GuardsPendingOrderCancellation;
+
     private const MAX_PRODUCT_QUANTITY = 4_294_967_295;
 
     public function __construct(private readonly ApplyDeliveredOrderMembershipSpending $membership) {}
@@ -66,6 +69,7 @@ class DeliverCodOrder
 
                     return $order;
                 }
+                $this->assertNoPendingCancellationRequest($order);
                 if ($latest->to_status !== $order->status) {
                     throw ValidationException::withMessages(['order' => 'Lịch sử trạng thái không khớp Order. Vui lòng đối soát trước khi giao.']);
                 }

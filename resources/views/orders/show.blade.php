@@ -37,6 +37,9 @@
         <h2 id="cancellation-title">Yêu cầu hủy đơn</h2>
         @if($order->cancellationRequest)
             <p><span class="status-badge status-badge--{{ $order->cancellationRequest->status === \App\Enums\OrderCancellationRequestStatus::Approved ? 'success' : ($order->cancellationRequest->status === \App\Enums\OrderCancellationRequestStatus::Rejected ? 'danger' : 'warning') }}">{{ $order->cancellationRequest->status->label() }}</span></p>
+            @if($order->cancellationRequest->status === \App\Enums\OrderCancellationRequestStatus::Pending && $order->status !== \App\Enums\OrderStatus::Placed)
+                <div class="alert alert--warning" role="status">Đơn đã chuyển sang {{ $order->status->label() }}. Yêu cầu hủy không còn đủ điều kiện chấp thuận và đang chờ nhân viên đóng bằng quyết định từ chối.</div>
+            @endif
             <dl class="order-data-list"><div class="order-data-list__wide"><dt>Lý do</dt><dd>{{ $order->cancellationRequest->reason }}</dd></div><div><dt>Gửi lúc</dt><dd>{{ $order->cancellationRequest->created_at->timezone('Asia/Ho_Chi_Minh')->format('H:i · d/m/Y') }}</dd></div>@if($order->cancellationRequest->review_note)<div class="order-data-list__wide"><dt>Phản hồi</dt><dd>{{ $order->cancellationRequest->review_note }}</dd></div>@endif</dl>
         @elseif($order->status === \App\Enums\OrderStatus::Placed)
             <p>Nhân viên sẽ xem xét yêu cầu. Việc gửi yêu cầu chưa làm thay đổi trạng thái đơn.</p>
