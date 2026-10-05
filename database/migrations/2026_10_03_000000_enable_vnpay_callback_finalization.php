@@ -70,7 +70,18 @@ return new class extends Migration
     private function createChecksAndGuards(): void
     {
         if (DB::getDriverName() === 'mysql') {
-            $attemptCheckMaria = "(
+            $version = strtolower((string) DB::selectOne('SELECT VERSION() AS version')->version);
+            $mariaDb = str_contains($version, 'mariadb');
+            $fingerprintCheck = static fn (string $column): string => $mariaDb
+                ? "{$column} REGEXP BINARY '^[0-9a-f]{64}$'"
+                : "REGEXP_LIKE({$column}, '^[0-9a-f]{64}$', 'c')";
+            $resultCodeCheck = static fn (string $column): string => $mariaDb
+                ? "{$column} REGEXP BINARY '^[0-9]{2}$'"
+                : "REGEXP_LIKE({$column}, '^[0-9]{2}$', 'c')";
+            $callbackFingerprintCheck = $fingerprintCheck('callback_fingerprint');
+            $gatewayResultCodeCheck = $resultCodeCheck('gateway_result_code');
+            $gatewayTransactionStatusCheck = $resultCodeCheck('gateway_transaction_status');
+            $attemptCheck = "(
                 (BINARY status = 'chua_thanh_toan' AND gateway_transaction_id IS NULL AND gateway_result_code IS NULL
                     AND gateway_transaction_status IS NULL AND gateway_paid_at IS NULL AND gateway_bank_code IS NULL
                     AND callback_fingerprint IS NULL AND verified_at IS NULL)
@@ -79,17 +90,17 @@ return new class extends Migration
                     AND gateway_transaction_id <> '' AND gateway_transaction_id <> '0'
                     AND gateway_paid_at IS NOT NULL
                     AND callback_fingerprint IS NOT NULL
-                    AND callback_fingerprint REGEXP BINARY '^[0-9a-f]{64}$' AND verified_at IS NOT NULL)
+                    AND {$callbackFingerprintCheck} AND verified_at IS NOT NULL)
                 OR (BINARY status = 'that_bai'
                     AND NOT (BINARY gateway_result_code = '00' AND BINARY gateway_transaction_status = '00')
-                    AND gateway_result_code REGEXP BINARY '^[0-9]{2}$'
-                    AND gateway_transaction_status REGEXP BINARY '^[0-9]{2}$'
+                    AND {$gatewayResultCodeCheck}
+                    AND {$gatewayTransactionStatusCheck}
                     AND gateway_transaction_id IS NULL
                     AND gateway_paid_at IS NOT NULL
                     AND callback_fingerprint IS NOT NULL
-                    AND callback_fingerprint REGEXP BINARY '^[0-9a-f]{64}$' AND verified_at IS NOT NULL)
+                    AND {$callbackFingerprintCheck} AND verified_at IS NOT NULL)
             )";
-            DB::statement("ALTER TABLE payment_attempts ADD CONSTRAINT payment_attempts_callback_evidence_check CHECK ({$attemptCheckMaria})");
+            DB::statement("ALTER TABLE payment_attempts ADD CONSTRAINT payment_attempts_callback_evidence_check CHECK ({$attemptCheck})");
             DB::statement("ALTER TABLE refunds ADD CONSTRAINT refunds_domain_check CHECK (
                 amount_vnd > 0
                 AND BINARY reason IN ('stock_unavailable','coupon_capacity_unavailable','snapshot_incomplete')

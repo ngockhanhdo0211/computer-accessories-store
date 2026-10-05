@@ -24,6 +24,11 @@ class ValidateProductionEnvironment extends Command
         $this->expect($invalid, $this->present(config('database.connections.mysql.database')), 'DB_DATABASE');
         $this->expect($invalid, $this->present(config('database.connections.mysql.username')), 'DB_USERNAME');
         $this->expect($invalid, $this->present(config('database.connections.mysql.password')), 'DB_PASSWORD');
+        $mysqlOptions = config('database.connections.mysql.options', []);
+        $sslCa = is_array($mysqlOptions) ? ($mysqlOptions[\PDO::MYSQL_ATTR_SSL_CA] ?? null) : null;
+        $verifyServerCertificate = is_array($mysqlOptions) ? ($mysqlOptions[\PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] ?? null) : null;
+        $this->expect($invalid, $this->validReadableFile($sslCa), 'MYSQL_ATTR_SSL_CA');
+        $this->expect($invalid, $verifyServerCertificate === true, 'MYSQL_ATTR_SSL_VERIFY_SERVER_CERT');
         $this->expect($invalid, $this->validTimeout(config('deployment.database_connect_timeout')), 'DB_CONNECT_TIMEOUT');
         $this->expect($invalid, config('logging.default') === 'stderr', 'LOG_CHANNEL');
         $this->expect($invalid, config('session.driver') === 'database', 'SESSION_DRIVER');
@@ -140,6 +145,11 @@ class ValidateProductionEnvironment extends Command
     private function validTimeout(mixed $timeout): bool
     {
         return $this->validPort($timeout) && (int) $timeout <= 2;
+    }
+
+    private function validReadableFile(mixed $path): bool
+    {
+        return $this->present($path) && is_file($path) && is_readable($path);
     }
 
     private function validPublicHostname(string $host): bool

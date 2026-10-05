@@ -92,11 +92,15 @@ return new class extends Migration
     private function createRequestGuards(): void
     {
         if (DB::getDriverName() === 'mysql') {
+            $version = strtolower((string) DB::selectOne('SELECT VERSION() AS version')->version);
+            $fingerprintCheck = str_contains($version, 'mariadb')
+                ? "review_fingerprint REGEXP BINARY '^[0-9a-f]{64}$'"
+                : "REGEXP_LIKE(review_fingerprint, '^[0-9a-f]{64}$', 'c')";
             DB::statement("ALTER TABLE order_cancellation_requests ADD CONSTRAINT order_cancellation_requests_shape_check CHECK (
                 TRIM(reason) <> '' AND BINARY status IN ('pending','approved','rejected')
                 AND ((BINARY status = 'pending' AND reviewed_by IS NULL AND review_note IS NULL AND reviewed_at IS NULL AND review_event_key IS NULL AND review_fingerprint IS NULL)
-                  OR (BINARY status = 'approved' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND review_event_key IS NOT NULL AND review_fingerprint REGEXP BINARY '^[0-9a-f]{64}$')
-                  OR (BINARY status = 'rejected' AND reviewed_by IS NOT NULL AND review_note IS NOT NULL AND TRIM(review_note) <> '' AND reviewed_at IS NOT NULL AND review_event_key IS NOT NULL AND review_fingerprint REGEXP BINARY '^[0-9a-f]{64}$')))");
+                  OR (BINARY status = 'approved' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND review_event_key IS NOT NULL AND {$fingerprintCheck})
+                  OR (BINARY status = 'rejected' AND reviewed_by IS NOT NULL AND review_note IS NOT NULL AND TRIM(review_note) <> '' AND reviewed_at IS NOT NULL AND review_event_key IS NOT NULL AND {$fingerprintCheck})))");
             DB::unprepared("CREATE TRIGGER order_cancellation_requests_insert_guard BEFORE INSERT ON order_cancellation_requests FOR EACH ROW BEGIN
                 IF NOT EXISTS (SELECT 1 FROM orders o WHERE o.id = NEW.order_id AND o.user_id = NEW.customer_id AND BINARY o.status = 'da_dat') THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'cancellation request must belong to a placed customer order'; END IF;
             END");

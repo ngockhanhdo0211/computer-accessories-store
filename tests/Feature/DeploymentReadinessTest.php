@@ -166,6 +166,32 @@ class DeploymentReadinessTest extends TestCase
         $this->assertInvalidRawBoolean('RUN_MIGRATIONS', ' false ', false);
     }
 
+    public function test_production_validation_requires_a_readable_ca_and_server_certificate_verification(): void
+    {
+        $this->setValidProductionConfiguration();
+        config()->set('database.connections.mysql.options', [
+            \PDO::MYSQL_ATTR_SSL_CA => 'C:/private/do-not-report-ca.pem',
+            \PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
+        ]);
+
+        $this->assertSame(1, Artisan::call('app:validate-production'));
+        $output = Artisan::output();
+        $this->assertStringContainsString('MYSQL_ATTR_SSL_CA', $output);
+        $this->assertStringContainsString('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', $output);
+        $this->assertStringNotContainsString('C:/private/do-not-report-ca.pem', $output);
+    }
+
+    public function test_local_database_configuration_does_not_force_tls_without_a_ca(): void
+    {
+        foreach (['mysql', 'mariadb'] as $connection) {
+            $options = config("database.connections.{$connection}.options");
+
+            $this->assertIsArray($options);
+            $this->assertArrayNotHasKey(\PDO::MYSQL_ATTR_SSL_CA, $options);
+            $this->assertArrayNotHasKey(\PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT, $options);
+        }
+    }
+
     public function test_vnpay_validation_requires_the_canonical_return_endpoint_when_enabled(): void
     {
         foreach ([
@@ -310,6 +336,10 @@ class DeploymentReadinessTest extends TestCase
             'database.connections.mysql.database' => 'shop',
             'database.connections.mysql.username' => 'shop_user',
             'database.connections.mysql.password' => 'not-reported',
+            'database.connections.mysql.options' => [
+                \PDO::MYSQL_ATTR_SSL_CA => __FILE__,
+                \PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true,
+            ],
             'deployment.database_connect_timeout' => 2,
             'logging.default' => 'stderr',
             'session.driver' => 'database',

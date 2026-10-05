@@ -69,8 +69,12 @@ return new class extends Migration
     private function createGuards(): void
     {
         if (DB::getDriverName() === 'mysql') {
+            $version = strtolower((string) DB::selectOne('SELECT VERSION() AS version')->version);
+            $clientKeyCheck = str_contains($version, 'mariadb')
+                ? "client_message_key REGEXP BINARY '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'"
+                : "REGEXP_LIKE(client_message_key, '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$', 'c')";
             DB::statement("ALTER TABLE support_conversations ADD CONSTRAINT support_conversations_shape_check CHECK (BINARY status IN ('open','closed') AND ((BINARY status = 'open' AND closed_by IS NULL AND closed_at IS NULL) OR (BINARY status = 'closed' AND closed_by IS NOT NULL AND closed_at IS NOT NULL)))");
-            DB::statement("ALTER TABLE support_messages ADD CONSTRAINT support_messages_content_check CHECK (CHAR_LENGTH(content) BETWEEN 1 AND 2000 AND content REGEXP '[^[:space:]]' AND client_message_key REGEXP BINARY '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')");
+            DB::statement("ALTER TABLE support_messages ADD CONSTRAINT support_messages_content_check CHECK (CHAR_LENGTH(content) BETWEEN 1 AND 2000 AND content REGEXP '[^[:space:]]' AND {$clientKeyCheck})");
             DB::unprepared("CREATE TRIGGER support_conversations_insert_guard BEFORE INSERT ON support_conversations FOR EACH ROW BEGIN
                 IF NOT EXISTS (SELECT 1 FROM users u WHERE u.id = NEW.customer_id AND BINARY u.role = 'customer') THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'support conversation customer is invalid'; END IF;
             END");

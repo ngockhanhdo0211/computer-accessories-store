@@ -68,8 +68,8 @@ return new class extends Migration
 
     private function createGatewayAttemptGuards(): void
     {
-        $shape = $this->gatewayAttemptShapeCheck();
         if (DB::getDriverName() === 'mysql') {
+            $shape = $this->gatewayAttemptShapeCheck();
             DB::statement("ALTER TABLE refund_gateway_attempts ADD CONSTRAINT refund_gateway_attempts_shape_check CHECK ({$shape})");
             DB::unprepared("CREATE TRIGGER refund_gateway_attempts_update_guard BEFORE UPDATE ON refund_gateway_attempts
                 FOR EACH ROW BEGIN
@@ -136,14 +136,26 @@ return new class extends Migration
 
     private function gatewayAttemptShapeCheck(): string
     {
+        $version = strtolower((string) DB::selectOne('SELECT VERSION() AS version')->version);
+        $mariaDb = str_contains($version, 'mariadb');
+        $regex = static fn (string $column, string $pattern): string => $mariaDb
+            ? "{$column} REGEXP BINARY '{$pattern}'"
+            : "REGEXP_LIKE({$column}, '{$pattern}', 'c')";
+        $requestIdCheck = $regex('request_id', '^RF[0-9A-F]{30}$');
+        $requestFingerprintCheck = $regex('request_fingerprint', '^[0-9a-f]{64}$');
+        $responseCodeCheck = $regex('response_code', '^[0-9]{2}$');
+        $transactionStatusCheck = $regex('transaction_status', '^[0-9]{2}$');
+        $responseFingerprintCheck = $regex('response_fingerprint', '^[0-9a-f]{64}$');
+        $reconciliationFingerprintCheck = $regex('reconciliation_fingerprint', '^[0-9a-f]{64}$');
+
         return "amount_vnd > 0
-            AND request_id REGEXP BINARY '^RF[0-9A-F]{30}$'
-            AND request_fingerprint REGEXP BINARY '^[0-9a-f]{64}$'
+            AND {$requestIdCheck}
+            AND {$requestFingerprintCheck}
             AND BINARY status IN ('submitted','succeeded','failed','ambiguous')
-            AND (response_code IS NULL OR response_code REGEXP BINARY '^[0-9]{2}$')
-            AND (transaction_status IS NULL OR transaction_status REGEXP BINARY '^[0-9]{2}$')
-            AND (response_fingerprint IS NULL OR response_fingerprint REGEXP BINARY '^[0-9a-f]{64}$')
-            AND (reconciliation_fingerprint IS NULL OR reconciliation_fingerprint REGEXP BINARY '^[0-9a-f]{64}$')
+            AND (response_code IS NULL OR {$responseCodeCheck})
+            AND (transaction_status IS NULL OR {$transactionStatusCheck})
+            AND (response_fingerprint IS NULL OR {$responseFingerprintCheck})
+            AND (reconciliation_fingerprint IS NULL OR {$reconciliationFingerprintCheck})
             AND (completed_at IS NULL OR completed_at >= submitted_at)
             AND (reconciled_at IS NULL OR reconciled_at >= submitted_at)
             AND (

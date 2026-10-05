@@ -33,11 +33,16 @@ return new class extends Migration
             return;
         }
 
-        DB::statement(<<<'SQL'
+        $version = strtolower((string) DB::selectOne('SELECT VERSION() AS version')->version);
+        $fingerprintCheck = str_contains($version, 'mariadb')
+            ? "idempotency_fingerprint REGEXP BINARY '^[0-9a-f]{64}$'"
+            : "REGEXP_LIKE(idempotency_fingerprint, '^[0-9a-f]{64}$', 'c')";
+
+        DB::statement(<<<SQL
             ALTER TABLE orders
                 ADD COLUMN idempotency_fingerprint CHAR(64) NULL AFTER request_key,
                 ADD CONSTRAINT orders_idempotency_fingerprint_check CHECK (
-                    (BINARY payment_method = 'cod' AND idempotency_fingerprint IS NOT NULL AND idempotency_fingerprint REGEXP BINARY '^[0-9a-f]{64}$')
+                    (BINARY payment_method = 'cod' AND idempotency_fingerprint IS NOT NULL AND {$fingerprintCheck})
                     OR (BINARY payment_method = 'vnpay' AND idempotency_fingerprint IS NULL)
                 )
             SQL);

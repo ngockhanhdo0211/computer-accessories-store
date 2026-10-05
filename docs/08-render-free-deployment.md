@@ -38,7 +38,7 @@ Render mặc định cấp `PORT=10000`; container vẫn lấy giá trị độn
 - [ ] Support Chat commit sạch.
 - [ ] Docker readiness checkpoint đã review và commit.
 - [ ] Diff và toàn bộ quality gate đã được kiểm tra trước khi push branch dùng để deploy.
-- [ ] Aiven MySQL compatibility gate PASS trên database QA tách biệt.
+- [x] Aiven MySQL 8.4 compatibility gate PASS trên database QA tách biệt (Checkpoint 2).
 - [ ] Cloudinary storage checkpoint PASS.
 - [ ] Full PHPUnit suite và Vite build PASS.
 - [ ] Có backup nguồn dữ liệu được phép đưa lên demo.
@@ -61,7 +61,8 @@ Chỉ nhập giá trị thật trong Render Dashboard. Không ghi chúng vào Gi
 | `DB_CONNECTION` | Bắt buộc `mysql`. |
 | `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | Kết nối Aiven, nhập sau compatibility gate. |
 | `DB_CONNECT_TIMEOUT` | Timeout kết nối của readiness, từ 1 đến 2 giây; Blueprint đặt `2`. |
-| `MYSQL_ATTR_SSL_CA` | Đường dẫn CA nếu contract Aiven checkpoint yêu cầu. Không tự tạo hostname/certificate giả. |
+| `MYSQL_ATTR_SSL_CA` | Bắt buộc là đường dẫn runtime tới CA được upload bằng Render Secret File, ví dụ `/etc/secrets/aiven-ca.pem`. |
+| `MYSQL_ATTR_SSL_VERIFY_SERVER_CERT` | Bắt buộc `true`; PDO phải xác minh chứng thư máy chủ bằng CA đã cấu hình. |
 | `SESSION_DRIVER` | `database`; migration `sessions` đã tồn tại. |
 | `SESSION_SECURE_COOKIE` | `true`. |
 | `SESSION_HTTP_ONLY` | `true`. |
@@ -73,7 +74,21 @@ Chỉ nhập giá trị thật trong Render Dashboard. Không ghi chúng vào Gi
 | `VNPAY_PAYMENT_URL`, `VNPAY_TERMINAL_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` | VNPay Sandbox hiện có. Return URL phải là URL HTTPS Render cộng `/checkout/vnpay/return`. |
 | `VNPAY_REFUND_URL`, `VNPAY_REFUND_CREATE_BY`, `VNPAY_REFUND_IP_ADDRESS` | Refund Sandbox hiện có, chỉ cấu hình khi demo VNPay/refund. |
 
-`DB_SSL_MODE` không được khai báo giả trong checkpoint này vì cấu hình hiện dùng `MYSQL_ATTR_SSL_CA`. Cách cung cấp CA/SSL chính xác phải được chứng minh ở Aiven compatibility gate.
+Không lưu nội dung CA trong Git, Docker image, Blueprint hay một environment variable. Trong Render Dashboard, tạo Secret File tên `aiven-ca.pem`; Render mount file tại `/etc/secrets/aiven-ca.pem`, sau đó đặt `MYSQL_ATTR_SSL_CA` thành đúng đường dẫn đó. `app:validate-production` dừng startup nếu CA không đọc được hoặc xác minh chứng thư máy chủ không được bật. Không dựa vào cấu hình `require_secure_transport` phía server để thay thế xác minh TLS phía client.
+
+`DB_SSL_MODE` không được khai báo vì kết nối PDO hiện dùng trực tiếp `MYSQL_ATTR_SSL_CA` và `PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT`.
+
+## 4.1. Kết quả Aiven MySQL 8.4 Compatibility
+
+Checkpoint 2 đã được kiểm tra trên một database QA rỗng, tách biệt với development và production:
+
+- MySQL 8.4.8, InnoDB, `utf8mb4`, TLS 1.3 với xác minh CA và chứng thư máy chủ;
+- toàn bộ 30 migration chạy thành công; rollback/up có mục tiêu của migration cuối chạy thành công mà không dùng `migrate:fresh`;
+- schema sau migration gồm 36 bảng, 59 foreign key, 40 unique constraint, 80 CHECK constraint, 47 trigger, 55 cột thời gian precision 6 và 6 cột JSON native;
+- `CHECK TABLE` đạt cho toàn bộ bảng hỗ trợ; các negative test trực tiếp xác nhận FK/unique/CHECK/trigger, JSON, microsecond datetime, transaction rollback, row locking và idempotency;
+- mọi fixture QA đã được dọn, chỉ giữ schema và hai Shipping Rate mặc định do migration tạo.
+
+Khác biệt dialect duy nhất cần sửa là biểu thức chính quy phân biệt hoa/thường trong CHECK: MariaDB 10.4 giữ `REGEXP BINARY`, còn MySQL 8.4 dùng `REGEXP_LIKE(..., ..., 'c')`. Hai nhánh giữ cùng pattern và không làm yếu constraint. SQLite tiếp tục dùng nhánh trigger/CHECK hiện có.
 
 Cloudinary và Google variables sẽ được bổ sung ở checkpoint tương ứng; hiện chưa có code nên không thêm secret placeholder.
 

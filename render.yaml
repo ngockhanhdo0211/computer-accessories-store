@@ -36,6 +36,8 @@ services:
         sync: false
       - key: MYSQL_ATTR_SSL_CA
         sync: false
+      - key: MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
+        value: "true"
       - key: SESSION_DRIVER
         value: database
       - key: SESSION_SECURE_COOKIE
