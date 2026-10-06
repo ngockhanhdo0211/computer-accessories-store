@@ -168,6 +168,16 @@ Automatic deploy bị tắt trong Blueprint. Chỉ deploy thủ công sau khi đ
 - Không demo upload/delete ảnh trước Cloudinary.
 - Chuẩn bị mạng dự phòng và không phụ thuộc cold start dưới một phút.
 
+### Bootstrap Admin production khi Render Free không có Shell
+
+Chỉ chạy từ máy vận hành được phép kết nối Aiven sau khi đã checkout đúng commit deploy và cài dependency production. Nạp các biến production bằng cơ chế private ngoài repository, giữ `APP_ENV=production`, `DB_CONNECTION=mysql`, CA cục bộ và xác minh chứng thư máy chủ; không copy secret vào `.env`, command line, history hoặc Git. Sau khi xác minh database đích chính xác là production đã duyệt, chạy tương tác:
+
+```text
+php artisan app:promote-customer-to-admin admin-operator@example.com
+```
+
+Email phải thuộc một Customer hiện hữu đang `active`. Đọc kỹ cảnh báo `APP_ENV=production` và chỉ trả lời `yes` sau khi đối chiếu đúng tài khoản/database. Lệnh production chạy với `--no-interaction` sẽ fail-closed và không truy vấn/thay đổi tài khoản; không có option bypass confirmation. Lệnh không tạo hay đổi password, không sửa membership/session và không có HTTP endpoint; thay đổi role cùng audit hệ thống được commit nguyên tử. Chạy lại chỉ trả thành công khi audit evidence của lần bootstrap trước còn nguyên vẹn. Không đặt lệnh này trong Render startup hoặc deploy hook.
+
 ## 12. Rollback
 
 - Rollback Render về image/commit trước trong số deployment còn được Render giữ.

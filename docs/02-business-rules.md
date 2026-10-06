@@ -8,7 +8,7 @@ Các từ khóa trạng thái/mã dưới đây là giá trị nghiệp vụ đ�
 - Chỉ customer tự đăng ký. Admin tạo employee; không mở đăng ký admin công khai. Không khóa hoặc hạ quyền admin cuối cùng.
 - Mật khẩu luôn hash. Không xóa cứng tài khoản đã phát sinh dữ liệu. Phân quyền kiểm tra tại backend và theo quyền sở hữu dữ liệu; thao tác nhạy cảm lưu audit log.
 - `locked` là khóa tạm, `inactive` là ngừng sử dụng. Cả hai từ chối đăng nhập và thu hồi session. Admin có thể mở `locked`; password reset không tự mở khóa. `inactive` không tự khôi phục, chỉ admin kích hoạt lại.
-- Admin đầu tiên dự kiến tạo bằng lệnh Artisan tương tác `app:create-admin`: kiểm tra email trùng và hash password; không hard-code admin/password trong repository. Factory chỉ phục vụ test.
+- Admin production đầu tiên được bootstrap bằng lệnh Artisan nội bộ `app:promote-customer-to-admin {email}`: chỉ nâng một Customer hiện hữu, `active` thành Admin trong transaction có khóa hàng và audit; không tạo tài khoản/mật khẩu, không hard-code credential và không có endpoint công khai. Lệnh yêu cầu xác nhận rõ trong production và replay chỉ thành công khi audit evidence nhất quán. Factory chỉ phục vụ test.
 
 ## Catalog
 
