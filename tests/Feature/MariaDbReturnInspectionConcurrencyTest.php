@@ -9,7 +9,6 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ReturnInspection;
 use App\Models\User;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -50,6 +49,12 @@ class MariaDbReturnInspectionConcurrencyTest extends TestCase
             'return_inspections_sellable_quantity_check',
             'return_inspections_damaged_quantity_check',
             'return_inspections_time_check',
+            'return_inspections_receive_event_pair_check',
+            'return_inspections_complete_event_pair_check',
+            'return_inspections_receive_event_format_check',
+            'return_inspections_complete_event_format_check',
+            'return_inspections_receive_fingerprint_check',
+            'return_inspections_complete_fingerprint_check',
         ] as $constraint) {
             $this->assertContains($constraint, $constraints);
         }
@@ -69,7 +74,7 @@ class MariaDbReturnInspectionConcurrencyTest extends TestCase
         $admin = User::factory()->admin()->create();
         $invalidItem = OrderItem::factory()->for($order)->create();
         $inspection = app(ReceiveReturnInspection::class)->handle(
-            $order->order_code, $item->id, $admin, CarbonImmutable::parse('2026-10-01 01:00:00 UTC'),
+            $order->order_code, $item->id, $admin, (string) Str::uuid(),
         );
 
         $this->assertQueryFails(fn () => DB::table('return_inspections')->where('id', $inspection->id)->update([
@@ -91,6 +96,22 @@ class MariaDbReturnInspectionConcurrencyTest extends TestCase
             'sellable_quantity' => 1,
             'damaged_quantity' => null,
             'note' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]));
+        $this->assertQueryFails(fn () => DB::table('return_inspections')->insert([
+            'order_item_id' => $invalidItem->id,
+            'received_by' => $admin->id,
+            'received_at' => now(),
+            'inspected_by' => null,
+            'inspected_at' => null,
+            'sellable_quantity' => null,
+            'damaged_quantity' => null,
+            'note' => null,
+            'receive_event_key' => 'NOT-A-UUID',
+            'receive_fingerprint' => hash('sha256', 'invalid'),
+            'complete_event_key' => null,
+            'complete_fingerprint' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ]));
@@ -125,8 +146,7 @@ class MariaDbReturnInspectionConcurrencyTest extends TestCase
     {
         [$order, $item] = $this->orderWithItem(quantity: 3);
         $admin = User::factory()->admin()->create();
-        $receivedAt = CarbonImmutable::parse('2026-10-01 01:00:00 UTC');
-        app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, $receivedAt, 'Nhận');
+        app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid(), 'Nhận');
 
         $processes = $this->runTwo('complete', $order, $item, $admin, '2026-10-01T02:00:00.000000Z', 2, 1, 'Hoàn tất');
 
@@ -160,7 +180,7 @@ class MariaDbReturnInspectionConcurrencyTest extends TestCase
         [$order, $item] = $this->orderWithItem(quantity: 3);
         $admin = User::factory()->admin()->create();
         app(ReceiveReturnInspection::class)->handle(
-            $order->order_code, $item->id, $admin, CarbonImmutable::parse('2026-10-01 01:00:00 UTC'),
+            $order->order_code, $item->id, $admin, (string) Str::uuid(),
         );
         $tasks = [
             $this->task('complete', $item, 2, 1, 'A'),
@@ -226,7 +246,7 @@ class MariaDbReturnInspectionConcurrencyTest extends TestCase
         return [$order, $item];
     }
 
-    /** @return array{operation: string, item_id: int, at: string, sellable: int, damaged: int, note: string} */
+    /** @return array{operation: string, item_id: int, at: string, event_key: string, sellable: int, damaged: int, note: string} */
     private function task(
         string $operation,
         OrderItem $item,
@@ -238,6 +258,7 @@ class MariaDbReturnInspectionConcurrencyTest extends TestCase
             'operation' => $operation,
             'item_id' => $item->id,
             'at' => '2026-10-01T01:00:00.000000Z',
+            'event_key' => (string) Str::uuid(),
             'sellable' => $sellable,
             'damaged' => $damaged,
             'note' => $note,
@@ -262,7 +283,7 @@ class MariaDbReturnInspectionConcurrencyTest extends TestCase
     }
 
     /**
-     * @param  list<array{operation: string, item_id: int, at: string, sellable: int, damaged: int, note: string}>  $tasks
+     * @param  list<array{operation: string, item_id: int, at: string, event_key: string, sellable: int, damaged: int, note: string}>  $tasks
      * @return list<Process>
      */
     private function runTasks(Order $order, User $actor, array $tasks): array
@@ -273,15 +294,14 @@ require getcwd().'/vendor/autoload.php';
 $app = require getcwd().'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $deadline = microtime(true) + 10;
-while (! file_exists($argv[9]) && microtime(true) < $deadline) { usleep(10000); }
-if (! file_exists($argv[9])) { fwrite(STDERR, 'barrier timeout'); exit(4); }
+while (! file_exists($argv[10]) && microtime(true) < $deadline) { usleep(10000); }
+if (! file_exists($argv[10])) { fwrite(STDERR, 'barrier timeout'); exit(4); }
 try {
     $actor = App\Models\User::query()->findOrFail((int) $argv[4]);
     if ($argv[1] === 'receive') {
-        $at = Carbon\CarbonImmutable::parse($argv[5]);
-        app(App\Actions\ReceiveReturnInspection::class)->handle($argv[2], (int) $argv[3], $actor, $at, $argv[8]);
+        app(App\Actions\ReceiveReturnInspection::class)->handle($argv[2], (int) $argv[3], $actor, $argv[9], $argv[8]);
     } else {
-        app(App\Actions\CompleteReturnInspection::class)->handle($argv[2], (int) $argv[3], $actor, (int) $argv[6], (int) $argv[7], $argv[8]);
+        app(App\Actions\CompleteReturnInspection::class)->handle($argv[2], (int) $argv[3], $actor, $argv[9], (int) $argv[6], (int) $argv[7], $argv[8]);
     }
     exit(0);
 } catch (Throwable $exception) {
@@ -299,6 +319,7 @@ PHP;
                 (string) $task['sellable'],
                 (string) $task['damaged'],
                 $task['note'],
+                $task['event_key'],
             ];
             $process = new Process([PHP_BINARY, '-r', $worker, ...$arguments, $barrier], base_path());
             $process->setTimeout(25);

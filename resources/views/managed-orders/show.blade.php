@@ -42,6 +42,14 @@
         <aside class="order-summary" aria-labelledby="managed-summary-title"><header><p class="section-label">Giá trị đã lưu</p><h2 id="managed-summary-title">Thanh toán</h2></header><dl class="checkout-totals"><div><dt>Phương thức</dt><dd>{{ $order->payment_method->label() }}</dd></div><div><dt>Trạng thái</dt><dd>{{ $order->payment_status->label() }}</dd></div><div><dt>Tạm tính</dt><dd>{{ number_format($order->items_subtotal_vnd, 0, ',', '.') }} ₫</dd></div><div><dt>Giảm sản phẩm</dt><dd>− {{ number_format($order->item_discount_vnd, 0, ',', '.') }} ₫</dd></div><div><dt>Phí vận chuyển</dt><dd>{{ number_format($order->shipping_fee_vnd, 0, ',', '.') }} ₫</dd></div><div><dt>Giảm vận chuyển</dt><dd>− {{ number_format($order->shipping_discount_vnd, 0, ',', '.') }} ₫</dd></div><div><dt>Tổng ưu đãi</dt><dd>− {{ number_format($order->total_discount_vnd, 0, ',', '.') }} ₫</dd></div>@if($order->coupon_snapshot_json)<div><dt>Coupon snapshot</dt><dd>{{ $order->coupon_snapshot_json['code'] }}</dd></div>@endif<div class="checkout-totals__grand"><dt>Tổng cộng</dt><dd>{{ number_format($order->total_vnd, 0, ',', '.') }} ₫</dd></div></dl>
             @if($order->paymentAttempt)<div class="payment-attempt-summary"><p class="section-label">Payment Attempt</p><dl><div><dt>Tham chiếu</dt><dd>{{ $order->paymentAttempt->gateway_reference }}</dd></div><div><dt>Trạng thái</dt><dd>{{ $order->paymentAttempt->status->label() }}</dd></div><div><dt>Số tiền</dt><dd>{{ number_format($order->paymentAttempt->amount_vnd, 0, ',', '.') }} ₫</dd></div><div><dt>Xác minh</dt><dd>{{ $order->paymentAttempt->verified_at?->timezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y') ?? 'Chưa xác minh' }}</dd></div></dl></div>@endif
 
+            @if($canManageInspections)
+                <section class="order-transition" aria-labelledby="return-inspection-title">
+                    <p class="section-label">Hàng hoàn</p><h2 id="return-inspection-title">Tiến độ kiểm tra</h2>
+                    <p><strong>{{ $inspectionCompletedCount }}/{{ $order->items->count() }}</strong> Order Item đã hoàn tất phân loại.</p>
+                    <a class="button button--outline" href="{{ route($routePrefix.'.orders.return-inspections.show', $order->order_code) }}">Kiểm tra hàng hoàn</a>
+                </section>
+            @endif
+
             @if($nextStatus)
                 <section class="order-transition" aria-labelledby="order-transition-title">
                     <p class="section-label">Tiến trình vận chuyển</p>

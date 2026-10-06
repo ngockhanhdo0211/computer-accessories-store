@@ -21,6 +21,7 @@ use App\Http\Controllers\ManagedOrderCancellationRequestController;
 use App\Http\Controllers\ManagedOrderController;
 use App\Http\Controllers\ManagedSupportController;
 use App\Http\Controllers\OrderCancellationRequestController;
+use App\Http\Controllers\ReturnInspectionController;
 use App\Http\Controllers\VnPayIpnController;
 use Illuminate\Support\Facades\Route;
 
@@ -99,6 +100,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::patch('/order-cancellation-requests/{cancellationRequest}/approve', [ManagedOrderCancellationRequestController::class, 'approve'])->name('order-cancellation-requests.approve');
         Route::patch('/order-cancellation-requests/{cancellationRequest}/reject', [ManagedOrderCancellationRequestController::class, 'reject'])->name('order-cancellation-requests.reject');
         Route::get('/orders', [ManagedOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{orderCode}/return-inspections', [ReturnInspectionController::class, 'show'])->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')->name('orders.return-inspections.show');
+        Route::post('/orders/{orderCode}/return-inspections/{orderItem}/receive', [ReturnInspectionController::class, 'receive'])->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')->whereNumber('orderItem')->name('orders.return-inspections.receive');
+        Route::patch('/orders/{orderCode}/return-inspections/{orderItem}/complete', [ReturnInspectionController::class, 'complete'])->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')->whereNumber('orderItem')->name('orders.return-inspections.complete');
         Route::get('/orders/{orderCode}', [ManagedOrderController::class, 'show'])
             ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
             ->name('orders.show');
@@ -151,6 +155,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::patch('/refunds/{refund}/mark-ambiguous', [RefundController::class, 'markAmbiguous'])->name('refunds.mark-ambiguous');
         Route::patch('/refunds/{refund}/reconcile', [RefundController::class, 'reconcile'])->name('refunds.reconcile');
         Route::get('/orders', [ManagedOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{orderCode}/return-inspections', [ReturnInspectionController::class, 'show'])->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')->name('orders.return-inspections.show');
+        Route::post('/orders/{orderCode}/return-inspections/{orderItem}/receive', [ReturnInspectionController::class, 'receive'])->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')->whereNumber('orderItem')->name('orders.return-inspections.receive');
+        Route::patch('/orders/{orderCode}/return-inspections/{orderItem}/complete', [ReturnInspectionController::class, 'complete'])->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')->whereNumber('orderItem')->name('orders.return-inspections.complete');
         Route::get('/orders/{orderCode}', [ManagedOrderController::class, 'show'])
             ->where('orderCode', '[A-Za-z0-9][A-Za-z0-9-]{0,39}')
             ->name('orders.show');

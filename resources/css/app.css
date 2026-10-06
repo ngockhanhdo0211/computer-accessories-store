@@ -741,6 +741,35 @@ h1, h2, h3 { min-width: 0; overflow-wrap: anywhere; font-family: var(--font-disp
 .support-close-form { display: flex; justify-content: flex-end; padding: 0 var(--space-5) var(--space-5); }
 .support-thread__placeholder { margin: auto; }
 
+.return-inspection-page { display: grid; gap: var(--space-6); }
+.inspection-progress { display: grid; grid-template-columns: auto minmax(12rem, 1fr); align-items: center; gap: var(--space-5); padding: var(--space-4) var(--space-5); border: var(--border-thin) solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-paper); }
+.inspection-progress div { display: grid; gap: var(--space-1); }
+.inspection-progress strong { font-size: var(--text-xl); color: var(--color-primary); }
+.inspection-progress span { color: var(--color-ink-muted); }
+.inspection-progress progress { width: 100%; accent-color: var(--color-primary); }
+.inspection-list { display: grid; gap: var(--space-4); }
+.inspection-card { min-width: 0; padding: var(--space-5); border: var(--border-thin) solid var(--color-line); border-left: .25rem solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-paper); }
+.inspection-card--pending { border-left-color: var(--color-warning); }
+.inspection-card--completed { border-left-color: var(--color-success); }
+.inspection-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.inspection-card__header h2, .inspection-card__header p { margin: 0; overflow-wrap: anywhere; }
+.inspection-card__header > div { min-width: 0; display: grid; gap: var(--space-1); }
+.inspection-form { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding-top: var(--space-5); border-top: var(--border-thin) solid var(--color-line); }
+.inspection-form .button { justify-self: start; }
+.inspection-quantity-grid, .inspection-evidence { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.inspection-evidence { margin: var(--space-5) 0 0; }
+.inspection-evidence div { min-width: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-canvas); }
+.inspection-evidence dt { color: var(--color-ink-muted); font-size: var(--text-sm); }
+.inspection-evidence dd { margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.inspection-evidence__wide { grid-column: 1 / -1; }
+
+@media (max-width: 40rem) {
+  .inspection-progress, .inspection-quantity-grid, .inspection-evidence { grid-template-columns: 1fr; }
+  .inspection-card__header { align-items: flex-start; flex-direction: column; }
+  .inspection-evidence__wide { grid-column: auto; }
+  .inspection-form .button { width: 100%; }
+}
+
 @media (max-width: 64rem) {
   .support-workspace__layout { height: max(34rem, calc(100dvh - 10rem)); grid-template-columns: 1fr; }
   .support-inbox { border-right: 0; }

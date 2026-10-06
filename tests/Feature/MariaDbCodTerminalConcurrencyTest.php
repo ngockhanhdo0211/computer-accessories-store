@@ -361,8 +361,8 @@ PHP;
     private function inspect(Order $order, $items, User $actor, array $splits): void
     {
         foreach ($items->values() as $index => $item) {
-            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, now());
-            app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, $splits[$index][0], $splits[$index][1]);
+            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid());
+            app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid(), $splits[$index][0], $splits[$index][1]);
         }
     }
 }

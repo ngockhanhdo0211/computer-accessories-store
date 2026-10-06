@@ -19,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use LogicException;
 use RuntimeException;
@@ -33,9 +34,10 @@ class ReturnInspectionFoundationTest extends TestCase
         [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 3);
         $employee = User::factory()->employee()->create();
         $receivedAt = CarbonImmutable::parse('2026-10-01 01:00:00 UTC');
+        $this->travelTo($receivedAt);
 
         $inspection = app(ReceiveReturnInspection::class)->handle(
-            $order->order_code, $item->id, $employee, $receivedAt, 'Đã nhận tại kho.',
+            $order->order_code, $item->id, $employee, (string) Str::uuid(), 'Đã nhận tại kho.',
         );
 
         $this->assertFalse($inspection->completed);
@@ -46,8 +48,9 @@ class ReturnInspectionFoundationTest extends TestCase
         $this->assertTrue($item->fresh()->returnInspection->is($inspection));
 
         $inspection = app(CompleteReturnInspection::class)->handle(
-            $order->order_code, $item->id, $employee, 2, 1, 'Một sản phẩm hỏng.',
+            $order->order_code, $item->id, $employee, (string) Str::uuid(), 2, 1, 'Một sản phẩm hỏng.',
         );
+        $this->travelBack();
 
         $this->assertTrue($inspection->completed);
         $this->assertSame(2, $inspection->sellable_quantity);
@@ -84,6 +87,22 @@ class ReturnInspectionFoundationTest extends TestCase
         $base = $this->pendingRow($item, $admin);
 
         foreach ([
+            [
+                'receive_event_key' => (string) Str::uuid(),
+                'receive_fingerprint' => null,
+            ],
+            [
+                'receive_event_key' => 'not-a-uuid',
+                'receive_fingerprint' => hash('sha256', 'invalid-key'),
+            ],
+            [
+                'receive_event_key' => strtoupper((string) Str::uuid()),
+                'receive_fingerprint' => hash('sha256', 'uppercase-key'),
+            ],
+            [
+                'complete_event_key' => (string) Str::uuid(),
+                'complete_fingerprint' => hash('sha256', 'pending-cannot-be-complete'),
+            ],
             ['inspected_by' => $admin->id],
             ['sellable_quantity' => -1],
             [
@@ -145,7 +164,9 @@ class ReturnInspectionFoundationTest extends TestCase
         [$order, $item] = $this->orderWithItem(OrderStatus::AwaitingHandoff, 2);
         $admin = User::factory()->admin()->create();
         $receivedAt = CarbonImmutable::parse('2026-10-01 01:00:00 UTC');
-        $inspection = app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, $receivedAt);
+        $this->travelTo($receivedAt);
+        $inspection = app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid());
+        $this->travelBack();
 
         try {
             $inspection->forceFill(['received_at' => $receivedAt->addMinute()])->save();
@@ -155,7 +176,7 @@ class ReturnInspectionFoundationTest extends TestCase
         }
 
         $completed = app(CompleteReturnInspection::class)->handle(
-            $order->order_code, $item->id, $admin, 2, 0, 'Hoàn tất.',
+            $order->order_code, $item->id, $admin, (string) Str::uuid(), 2, 0, 'Hoàn tất.',
         );
 
         foreach ([
@@ -187,14 +208,14 @@ class ReturnInspectionFoundationTest extends TestCase
             foreach ([User::factory()->employee()->create(), User::factory()->admin()->create()] as $actor) {
                 [$order, $item] = $this->orderWithItem($status);
                 $this->assertInstanceOf(ReturnInspection::class, app(ReceiveReturnInspection::class)->handle(
-                    $order->order_code, $item->id, $actor, now(),
+                    $order->order_code, $item->id, $actor, (string) Str::uuid(),
                 ));
             }
         }
 
         [$transit, $transitItem] = $this->orderWithItem(OrderStatus::InTransit);
         $admin = User::factory()->admin()->create();
-        app(ReceiveReturnInspection::class)->handle($transit->order_code, $transitItem->id, $admin, now());
+        app(ReceiveReturnInspection::class)->handle($transit->order_code, $transitItem->id, $admin, (string) Str::uuid());
 
         foreach ([
             [OrderStatus::InTransit, User::factory()->employee()->create()],
@@ -206,7 +227,7 @@ class ReturnInspectionFoundationTest extends TestCase
         ] as [$status, $actor]) {
             [$order, $item] = $this->orderWithItem($status);
             $this->assertValidationFails(
-                fn () => app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, now()),
+                fn () => app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid()),
                 'authorization',
             );
         }
@@ -215,7 +236,7 @@ class ReturnInspectionFoundationTest extends TestCase
         $staleAdmin = User::factory()->admin()->create();
         DB::table('users')->where('id', $staleAdmin->id)->update(['status' => 'locked']);
         $this->assertValidationFails(
-            fn () => app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $staleAdmin, now()),
+            fn () => app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $staleAdmin, (string) Str::uuid()),
             'authorization',
         );
 
@@ -226,7 +247,7 @@ class ReturnInspectionFoundationTest extends TestCase
             try {
                 DB::table('users')->where('id', $invalidActor->id)->update([$field => $value]);
                 $this->assertValidationFails(
-                    fn () => app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $invalidActor, now()),
+                    fn () => app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $invalidActor, (string) Str::uuid()),
                     'authorization',
                 );
                 DB::table('users')->where('id', $invalidActor->id)->update([
@@ -243,42 +264,43 @@ class ReturnInspectionFoundationTest extends TestCase
     {
         [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 4);
         $admin = User::factory()->admin()->create();
-        $receivedAt = CarbonImmutable::parse('2026-10-01 01:00:00 UTC');
         $receive = app(ReceiveReturnInspection::class);
         $complete = app(CompleteReturnInspection::class);
+        $receiveKey = (string) Str::uuid();
+        $completeKey = (string) Str::uuid();
 
-        $first = $receive->handle($order->order_code, $item->id, $admin, $receivedAt, 'Nhận');
-        $this->assertTrue($first->is($receive->handle($order->order_code, $item->id, $admin, $receivedAt, 'Nhận')));
+        $first = $receive->handle($order->order_code, $item->id, $admin, $receiveKey, 'Nhận');
+        $this->assertTrue($first->is($receive->handle($order->order_code, $item->id, $admin, $receiveKey, 'Nhận')));
         $this->assertDatabaseCount('return_inspections', 1);
         $this->assertDatabaseCount('audit_logs', 1);
 
         $this->assertValidationFails(
-            fn () => $receive->handle($order->order_code, $item->id, $admin, $receivedAt, 'Khác'),
-            'order_item',
+            fn () => $receive->handle($order->order_code, $item->id, $admin, $receiveKey, 'Khác'),
+            'event_key',
         );
         $otherAdmin = User::factory()->admin()->create();
         $this->assertValidationFails(
-            fn () => $receive->handle($order->order_code, $item->id, $otherAdmin, $receivedAt, 'Nhận'),
-            'order_item',
+            fn () => $receive->handle($order->order_code, $item->id, $otherAdmin, (string) Str::uuid(), 'Nhận'),
+            'event_key',
         );
 
-        $result = $complete->handle($order->order_code, $item->id, $admin, 3, 1, 'Hoàn tất');
-        $this->assertTrue($result->is($complete->handle($order->order_code, $item->id, $admin, 3, 1, 'Hoàn tất')));
+        $result = $complete->handle($order->order_code, $item->id, $admin, $completeKey, 3, 1, 'Hoàn tất');
+        $this->assertTrue($result->is($complete->handle($order->order_code, $item->id, $admin, $completeKey, 3, 1, 'Hoàn tất')));
         $this->assertDatabaseCount('audit_logs', 2);
-        $this->assertTrue($first->is($receive->handle($order->order_code, $item->id, $admin, $receivedAt, 'Nhận')));
+        $this->assertTrue($first->is($receive->handle($order->order_code, $item->id, $admin, $receiveKey, 'Nhận')));
         $this->assertDatabaseCount('audit_logs', 2);
 
         $this->assertValidationFails(
-            fn () => $complete->handle($order->order_code, $item->id, $admin, 4, 0, 'Hoàn tất'),
-            'order_item',
+            fn () => $complete->handle($order->order_code, $item->id, $admin, $completeKey, 4, 0, 'Hoàn tất'),
+            'event_key',
         );
         $this->assertValidationFails(
-            fn () => $complete->handle($order->order_code, $item->id, $admin, 3, 1, 'Khác'),
-            'order_item',
+            fn () => $complete->handle($order->order_code, $item->id, $admin, $completeKey, 3, 1, 'Khác'),
+            'event_key',
         );
         $this->assertValidationFails(
-            fn () => $complete->handle($order->order_code, $item->id, $otherAdmin, 3, 1, 'Hoàn tất'),
-            'order_item',
+            fn () => $complete->handle($order->order_code, $item->id, $otherAdmin, (string) Str::uuid(), 3, 1, 'Hoàn tất'),
+            'event_key',
         );
     }
 
@@ -286,8 +308,7 @@ class ReturnInspectionFoundationTest extends TestCase
     {
         [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 2);
         $admin = User::factory()->admin()->create();
-        $receivedAt = CarbonImmutable::parse('2026-10-01 01:00:00 UTC');
-        app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, $receivedAt);
+        app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid());
         $action = app(CompleteReturnInspection::class);
 
         foreach ([
@@ -300,7 +321,7 @@ class ReturnInspectionFoundationTest extends TestCase
             [PHP_INT_MAX, 1],
         ] as [$sellable, $damaged]) {
             $this->assertValidationFails(
-                fn () => $action->handle($order->order_code, $item->id, $admin, $sellable, $damaged),
+                fn () => $action->handle($order->order_code, $item->id, $admin, (string) Str::uuid(), $sellable, $damaged),
                 'quantity',
             );
         }
@@ -308,7 +329,7 @@ class ReturnInspectionFoundationTest extends TestCase
         $serverNow = now()->addHour()->toImmutable();
         $this->travelTo($serverNow);
         try {
-            $inspection = $action->handle($order->order_code, $item->id, $admin, 2, 0);
+            $inspection = $action->handle($order->order_code, $item->id, $admin, (string) Str::uuid(), 2, 0);
         } finally {
             $this->travelBack();
         }
@@ -323,11 +344,11 @@ class ReturnInspectionFoundationTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->assertValidationFails(
-            fn () => app(ReceiveReturnInspection::class)->handle($order->order_code, $foreignItem->id, $admin, now()),
+            fn () => app(ReceiveReturnInspection::class)->handle($order->order_code, $foreignItem->id, $admin, (string) Str::uuid()),
             'order_item',
         );
         $this->assertValidationFails(
-            fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $foreignItem->id, $admin, 2, 0),
+            fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $foreignItem->id, $admin, (string) Str::uuid(), 2, 0),
             'order_item',
         );
         $this->assertDatabaseCount('return_inspections', 0);
@@ -339,16 +360,15 @@ class ReturnInspectionFoundationTest extends TestCase
         [$order, $first] = $this->orderWithItem(OrderStatus::Placed, 2);
         $second = OrderItem::factory()->for($order)->create(['quantity' => 3, 'line_subtotal_vnd' => 300_000, 'line_total_vnd' => 300_000]);
         $admin = User::factory()->admin()->create();
-        $at = CarbonImmutable::parse('2026-10-01 01:00:00 UTC');
         $ready = app(OrderHasCompletedReturnInspections::class);
 
         $this->assertFalse($ready->handle($order));
-        app(ReceiveReturnInspection::class)->handle($order->order_code, $first->id, $admin, $at);
-        app(CompleteReturnInspection::class)->handle($order->order_code, $first->id, $admin, 2, 0);
+        app(ReceiveReturnInspection::class)->handle($order->order_code, $first->id, $admin, (string) Str::uuid());
+        app(CompleteReturnInspection::class)->handle($order->order_code, $first->id, $admin, (string) Str::uuid(), 2, 0);
         $this->assertFalse($ready->handle($order));
-        app(ReceiveReturnInspection::class)->handle($order->order_code, $second->id, $admin, $at);
+        app(ReceiveReturnInspection::class)->handle($order->order_code, $second->id, $admin, (string) Str::uuid());
         $this->assertFalse($ready->handle($order));
-        app(CompleteReturnInspection::class)->handle($order->order_code, $second->id, $admin, 2, 1);
+        app(CompleteReturnInspection::class)->handle($order->order_code, $second->id, $admin, (string) Str::uuid(), 2, 1);
         $this->assertTrue($ready->handle($order));
     }
 
@@ -368,10 +388,8 @@ class ReturnInspectionFoundationTest extends TestCase
             DB::table('membership_histories')->count(),
             DB::table('order_status_histories')->count(),
         ];
-        $at = CarbonImmutable::parse('2026-10-01 01:00:00 UTC');
-
-        app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, $at);
-        app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $admin, 1, 1);
+        app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid());
+        app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid(), 1, 1);
 
         $this->assertEquals($beforeOrder, $order->fresh()->getAttributes());
         $this->assertEquals($beforeProduct, $item->product->fresh()->getAttributes());
@@ -394,7 +412,7 @@ class ReturnInspectionFoundationTest extends TestCase
         Event::listen('eloquent.creating: '.AuditLog::class, fn () => throw new RuntimeException('forced audit failure'));
 
         try {
-            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, now());
+            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid());
             $this->fail('Audit failure must roll back Return Inspection.');
         } catch (RuntimeException $exception) {
             $this->assertSame('forced audit failure', $exception->getMessage());
@@ -411,18 +429,18 @@ class ReturnInspectionFoundationTest extends TestCase
         foreach ([OrderStatus::Placed, OrderStatus::AwaitingHandoff] as $status) {
             foreach ([User::factory()->employee()->create(), User::factory()->admin()->create()] as $actor) {
                 [$order, $item] = $this->orderWithItem($status, 2);
-                app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, $at);
+                app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid());
                 $this->assertTrue(app(CompleteReturnInspection::class)
-                    ->handle($order->order_code, $item->id, $actor, 2, 0)
+                    ->handle($order->order_code, $item->id, $actor, (string) Str::uuid(), 2, 0)
                     ->isCompleted());
             }
         }
 
         [$transit, $transitItem] = $this->orderWithItem(OrderStatus::InTransit, 2);
         $admin = User::factory()->admin()->create();
-        app(ReceiveReturnInspection::class)->handle($transit->order_code, $transitItem->id, $admin, $at);
+        app(ReceiveReturnInspection::class)->handle($transit->order_code, $transitItem->id, $admin, (string) Str::uuid());
         $this->assertTrue(app(CompleteReturnInspection::class)
-            ->handle($transit->order_code, $transitItem->id, $admin, 2, 0)
+            ->handle($transit->order_code, $transitItem->id, $admin, (string) Str::uuid(), 2, 0)
             ->isCompleted());
 
         foreach ([
@@ -431,9 +449,9 @@ class ReturnInspectionFoundationTest extends TestCase
         ] as [$status, $actor]) {
             [$order, $item] = $this->orderWithItem($status, 2);
             $receiver = User::factory()->admin()->create();
-            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $receiver, $at);
+            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $receiver, (string) Str::uuid());
             $this->assertValidationFails(
-                fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, 2, 0),
+                fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid(), 2, 0),
                 'authorization',
             );
         }
@@ -441,10 +459,10 @@ class ReturnInspectionFoundationTest extends TestCase
         foreach ([OrderStatus::Delivered, OrderStatus::Cancelled] as $status) {
             [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 2);
             $actor = User::factory()->admin()->create();
-            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, $at);
+            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid());
             DB::table('orders')->where('id', $order->id)->update(['status' => $status->value]);
             $this->assertValidationFails(
-                fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, 2, 0),
+                fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid(), 2, 0),
                 'authorization',
             );
         }
@@ -452,10 +470,10 @@ class ReturnInspectionFoundationTest extends TestCase
         foreach (['locked', 'inactive'] as $status) {
             [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 2);
             $actor = User::factory()->admin()->create();
-            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, $at);
+            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid());
             DB::table('users')->where('id', $actor->id)->update(['status' => $status]);
             $this->assertValidationFails(
-                fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, 2, 0),
+                fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid(), 2, 0),
                 'authorization',
             );
         }
@@ -463,12 +481,12 @@ class ReturnInspectionFoundationTest extends TestCase
         foreach ([['role', 'unknown'], ['status', 'unknown']] as [$field, $value]) {
             [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 2);
             $actor = User::factory()->admin()->create();
-            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, $at);
+            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid());
             DB::statement('PRAGMA ignore_check_constraints = ON');
             try {
                 DB::table('users')->where('id', $actor->id)->update([$field => $value]);
                 $this->assertValidationFails(
-                    fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, 2, 0),
+                    fn () => app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid(), 2, 0),
                     'authorization',
                 );
                 DB::table('users')->where('id', $actor->id)->update([
@@ -485,12 +503,11 @@ class ReturnInspectionFoundationTest extends TestCase
     {
         [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 2);
         $admin = User::factory()->admin()->create();
-        $at = CarbonImmutable::parse('2026-10-01 01:00:00 UTC');
-        $inspection = app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, $at);
+        $inspection = app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid());
         Event::listen('eloquent.creating: '.AuditLog::class, fn () => throw new RuntimeException('forced completion audit failure'));
 
         try {
-            app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $admin, 2, 0);
+            app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid(), 2, 0);
             $this->fail('Audit failure must roll back Return Inspection completion.');
         } catch (RuntimeException $exception) {
             $this->assertSame('forced completion audit failure', $exception->getMessage());
@@ -526,7 +543,7 @@ class ReturnInspectionFoundationTest extends TestCase
     {
         [$order, $item] = $this->orderWithItem(OrderStatus::Placed);
         $admin = User::factory()->admin()->create();
-        $inspection = app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, now());
+        $inspection = app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid());
         $migration = require database_path('migrations/2026_10_01_000001_create_return_inspections_table.php');
 
         try {
@@ -543,8 +560,8 @@ class ReturnInspectionFoundationTest extends TestCase
     {
         [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 2);
         $admin = User::factory()->admin()->create();
-        $inspection = app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, now());
-        $inspection = app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $admin, 2, 0);
+        $inspection = app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid());
+        $inspection = app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid(), 2, 0);
         DB::table('inventory_transactions')->insert([
             'product_id' => $item->product_id,
             'type' => 'cancel_restore',
@@ -569,6 +586,72 @@ class ReturnInspectionFoundationTest extends TestCase
 
         $this->assertDatabaseHas('return_inspections', ['id' => $inspection->id]);
         $this->assertDatabaseHas('inventory_transactions', ['return_inspection_id' => $inspection->id]);
+    }
+
+    public function test_idempotency_migration_guards_partial_state_and_evidence_rollback(): void
+    {
+        $migration = require database_path('migrations/2026_10_08_000000_add_idempotency_to_return_inspections.php');
+        $migration->down();
+
+        Schema::table('return_inspections', fn ($table) => $table->char('receive_event_key', 36)->nullable());
+        try {
+            $migration->up();
+            $this->fail('Partial idempotency metadata must stop migration.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('partial or previously applied state', $exception->getMessage());
+        }
+        Schema::table('return_inspections', fn ($table) => $table->dropColumn('receive_event_key'));
+        $migration->up();
+
+        [$order, $item] = $this->orderWithItem(OrderStatus::Placed);
+        $admin = User::factory()->admin()->create();
+        app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $admin, (string) Str::uuid());
+        try {
+            $migration->down();
+            $this->fail('Rollback must preserve idempotency evidence.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('idempotency evidence', $exception->getMessage());
+        }
+    }
+
+    public function test_historical_completed_row_without_event_metadata_remains_readable_but_is_not_replayable(): void
+    {
+        $migration = require database_path('migrations/2026_10_08_000000_add_idempotency_to_return_inspections.php');
+        $migration->down();
+        [$order, $item] = $this->orderWithItem(OrderStatus::Placed, 2);
+        $admin = User::factory()->admin()->create();
+        $receivedAt = now()->subMinute();
+        $id = DB::table('return_inspections')->insertGetId([
+            'order_item_id' => $item->id,
+            'received_by' => $admin->id,
+            'received_at' => $receivedAt,
+            'inspected_by' => null,
+            'inspected_at' => null,
+            'sellable_quantity' => null,
+            'damaged_quantity' => null,
+            'note' => 'Historical complete',
+            'created_at' => $receivedAt,
+            'updated_at' => $receivedAt,
+        ]);
+        DB::table('return_inspections')->where('id', $id)->update([
+            'inspected_by' => $admin->id,
+            'inspected_at' => now(),
+            'sellable_quantity' => 2,
+            'damaged_quantity' => 0,
+            'updated_at' => now(),
+        ]);
+        $migration->up();
+
+        $historical = ReturnInspection::query()->findOrFail($id);
+        $this->assertTrue($historical->isCompleted());
+        $this->assertNull($historical->receive_event_key);
+        $this->assertNull($historical->complete_event_key);
+        $this->assertValidationFails(
+            fn () => app(CompleteReturnInspection::class)->handle(
+                $order->order_code, $item->id, $admin, (string) Str::uuid(), 2, 0, 'Historical complete'
+            ),
+            'event_key',
+        );
     }
 
     /** @return array{Order, OrderItem} */

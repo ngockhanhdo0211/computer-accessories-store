@@ -24,7 +24,7 @@ da_dat ────────────────> cho_chuyen_phat ──�
 
 Customer Cancellation Request `pending` là một chốt vận hành trên Order: transition, staff cancellation hoặc delivery tiếp theo phải đợi request được xử lý. Các writer khóa thống nhất theo thứ tự actor → Order → cancellation request. Dữ liệu drift cũ có request pending trong khi Order đã rời `da_dat` chỉ được reject với ghi chú bắt buộc; không tự reject, không approve và không thay đổi inventory/payment/Coupon/Refund/Membership khi đóng request này.
 
-**Return Inspection Foundation:** Đã có chứng từ hai giai đoạn theo từng Order Item. Employee/Admin active được tiếp nhận và hoàn tất kiểm tra ở `da_dat`/`cho_chuyen_phat`; chỉ Admin active được thao tác ở `dang_trung_chuyen`. Foundation chỉ ghi bằng chứng và audit, chưa đổi Order sang `da_huy`, chưa hoàn kho hay tạo inventory transaction.
+**Return Inspection Operations:** Đã có chứng từ và giao diện hai giai đoạn theo từng Order Item. Employee/Admin active được tiếp nhận và hoàn tất kiểm tra ở `da_dat`/`cho_chuyen_phat`; chỉ Admin active được thao tác ở `dang_trung_chuyen`. Receive và Complete có event key/fingerprint riêng, audit cùng transaction và replay chỉ thành công khi toàn bộ evidence còn khớp. Dòng lịch sử thiếu metadata vẫn đọc được; pending lịch sử được complete bằng key mới, nhưng không giả lập replay/backfill. Thao tác này chỉ ghi evidence và audit, không tự đổi Order sang `da_huy`, hoàn kho hay tạo inventory transaction.
 
 ## Hiệu ứng khi chuyển trạng thái
 

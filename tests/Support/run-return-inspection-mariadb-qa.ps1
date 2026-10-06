@@ -47,6 +47,12 @@ try {
     & php artisan migrate --force
     if ($LASTEXITCODE -ne 0) { throw 'Return Inspection QA migration failed.' }
 
+    & php artisan migrate:rollback --path=database/migrations/2026_10_08_000000_add_idempotency_to_return_inspections.php --step=1 --force
+    if ($LASTEXITCODE -ne 0) { throw 'Return Inspection idempotency rollback QA failed.' }
+
+    & php artisan migrate --path=database/migrations/2026_10_08_000000_add_idempotency_to_return_inspections.php --force
+    if ($LASTEXITCODE -ne 0) { throw 'Return Inspection idempotency re-apply QA failed.' }
+
     & php vendor/bin/phpunit --no-configuration tests/Feature/MariaDbReturnInspectionConcurrencyTest.php
     if ($LASTEXITCODE -ne 0) { throw 'Return Inspection MariaDB metadata/concurrency QA failed.' }
 } finally {

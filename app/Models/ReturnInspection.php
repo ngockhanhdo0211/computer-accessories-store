@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use LogicException;
 
 class ReturnInspection extends Model
@@ -31,7 +32,7 @@ class ReturnInspection extends Model
 
         static::updating(function (ReturnInspection $inspection): void {
             if ($inspection->getRawOriginal('inspected_at') !== null
-                || $inspection->isDirty(['order_item_id', 'received_by', 'received_at', 'created_at'])
+                || $inspection->isDirty(['order_item_id', 'received_by', 'received_at', 'receive_event_key', 'receive_fingerprint', 'created_at'])
                 || ! $inspection->isCompleted()) {
                 throw new LogicException('Return Inspection permits only pending to completed transition.');
             }
@@ -98,6 +99,16 @@ class ReturnInspection extends Model
         }
         if ($this->note !== null && (! is_string($this->note) || mb_strlen($this->note) > 500)) {
             throw new LogicException('Return Inspection note is invalid.');
+        }
+        foreach ([['receive_event_key', 'receive_fingerprint'], ['complete_event_key', 'complete_fingerprint']] as [$key, $fingerprint]) {
+            if (($this->{$key} === null) !== ($this->{$fingerprint} === null)
+                || ($this->{$key} !== null && (! is_string($this->{$key}) || ! Str::isUuid($this->{$key}) || strtolower($this->{$key}) !== $this->{$key}))
+                || ($this->{$fingerprint} !== null && (! is_string($this->{$fingerprint}) || preg_match('/^[0-9a-f]{64}$/D', $this->{$fingerprint}) !== 1))) {
+                throw new LogicException('Return Inspection idempotency evidence is invalid.');
+            }
+        }
+        if (! $this->isCompleted() && ($this->complete_event_key !== null || $this->complete_fingerprint !== null)) {
+            throw new LogicException('Pending Return Inspection cannot have completion evidence.');
         }
         if ($this->isCompleted()
             && (! is_int($this->sellable_quantity) || $this->sellable_quantity < 0

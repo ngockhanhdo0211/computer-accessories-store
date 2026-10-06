@@ -110,7 +110,7 @@ class CodOrderTerminalLifecycleTest extends TestCase
         $this->assertRejected(fn () => app(CancelCodOrder::class)->handle($missing->order_code, $employee, (string) Str::uuid(), 'Thiếu kiểm tra'));
 
         [$pending, $pendingItems] = $this->order(OrderStatus::Placed, [1]);
-        app(ReceiveReturnInspection::class)->handle($pending->order_code, $pendingItems->first()->id, $employee, now());
+        app(ReceiveReturnInspection::class)->handle($pending->order_code, $pendingItems->first()->id, $employee, (string) Str::uuid());
         $this->assertRejected(fn () => app(CancelCodOrder::class)->handle($pending->order_code, $employee, (string) Str::uuid(), 'Chưa phân loại'));
 
         [$paid, $paidItems] = $this->order(OrderStatus::Placed, [1]);
@@ -620,8 +620,8 @@ class CodOrderTerminalLifecycleTest extends TestCase
     private function completeInspections(Order $order, $items, User $actor, array $splits): void
     {
         foreach ($items->values() as $index => $item) {
-            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, now(), 'Đã nhận hàng');
-            app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, $splits[$index][0], $splits[$index][1], 'Đã phân loại');
+            app(ReceiveReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid(), 'Đã nhận hàng');
+            app(CompleteReturnInspection::class)->handle($order->order_code, $item->id, $actor, (string) Str::uuid(), $splits[$index][0], $splits[$index][1], 'Đã phân loại');
         }
     }
 }

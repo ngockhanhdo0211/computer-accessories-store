@@ -13,19 +13,23 @@ trait AuthorizesReturnInspection
 {
     private function assertReturnInspectionAccess(User $actor, Order $order): void
     {
-        $role = UserRole::tryFrom((string) $actor->getRawOriginal('role'));
-        $status = UserStatus::tryFrom((string) $actor->getRawOriginal('status'));
-        $allowed = $status === UserStatus::Active && match ($order->status) {
-            OrderStatus::Placed, OrderStatus::AwaitingHandoff => in_array($role, [UserRole::Employee, UserRole::Admin], true),
-            OrderStatus::InTransit => $role === UserRole::Admin,
-            default => false,
-        };
-
-        if (! $allowed) {
+        if (! $this->returnInspectionAccessAllowed($actor, $order)) {
             throw ValidationException::withMessages([
                 'authorization' => 'Tài khoản không có quyền kiểm tra hàng hoàn ở trạng thái Order hiện tại.',
             ]);
         }
+    }
+
+    protected function returnInspectionAccessAllowed(User $actor, Order $order): bool
+    {
+        $role = UserRole::tryFrom((string) $actor->getRawOriginal('role'));
+        $status = UserStatus::tryFrom((string) $actor->getRawOriginal('status'));
+
+        return $status === UserStatus::Active && match ($order->status) {
+            OrderStatus::Placed, OrderStatus::AwaitingHandoff => in_array($role, [UserRole::Employee, UserRole::Admin], true),
+            OrderStatus::InTransit => $role === UserRole::Admin,
+            default => false,
+        };
     }
 
     private function normalizeInspectionNote(?string $note): ?string

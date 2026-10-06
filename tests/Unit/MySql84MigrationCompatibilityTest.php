@@ -44,6 +44,9 @@ class MySql84MigrationCompatibilityTest extends TestCase
             '2026_10_06_000000_create_support_chat_tables.php' => [
                 ["client_message_key REGEXP BINARY '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'", "REGEXP_LIKE(client_message_key, '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$', 'c')"],
             ],
+            '2026_10_08_000000_add_idempotency_to_return_inspections.php' => [
+                ["{\$column} REGEXP BINARY '{\$pattern}'", "REGEXP_LIKE({\$column}, '{\$pattern}', 'c')"],
+            ],
         ];
 
         foreach ($expectations as $migration => $pairs) {

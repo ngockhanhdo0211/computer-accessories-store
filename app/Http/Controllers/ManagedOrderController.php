@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\CancelCodOrder;
 use App\Actions\DeliverCodOrder;
 use App\Actions\GetOrders;
+use App\Actions\GetReturnInspectionOperations;
 use App\Actions\OrderHasCompletedReturnInspections;
 use App\Actions\TransitionOrderStatus;
 use App\Enums\OrderStatus;
@@ -49,16 +50,20 @@ class ManagedOrderController extends Controller
         Request $request,
         GetOrders $orders,
         OrderHasCompletedReturnInspections $inspectionReadiness,
+        GetReturnInspectionOperations $inspectionOperations,
         string $orderCode,
     ): View {
         $order = $orders->managedDetail($orderCode);
         $role = UserRole::tryFrom((string) $request->user()->getRawOriginal('role'));
         $inspectionReady = $inspectionReadiness->handle($order);
+        $order->items->load('returnInspection');
 
         return view('managed-orders.show', [
             'order' => $order,
             'routePrefix' => $this->routePrefix($request),
             'inspectionReady' => $inspectionReady,
+            'inspectionCompletedCount' => $order->items->filter(fn ($item) => $item->returnInspection?->isCompleted())->count(),
+            'canManageInspections' => $inspectionOperations->allows($request->user(), $order),
             'canCancelCod' => $order->payment_method === PaymentMethod::CashOnDelivery
                 && $order->payment_status === PaymentStatus::Unpaid
                 && $order->delivered_at === null
