@@ -5,14 +5,13 @@
 @section('content')
     <div class="shell">
         <header class="page-intro">
-            <p class="eyebrow">Tài khoản / Đăng ký</p>
             <h1>Đăng ký khách hàng</h1>
             <p>Điền thông tin để tạo tài khoản. Các trường đánh dấu bắt buộc cần được hoàn thành.</p>
         </header>
         <div class="auth-layout">
             <aside class="auth-aside">
-                <h2>Một tài khoản cho góc làm việc của bạn.</h2>
-                <p>Tạo tài khoản để sẵn sàng khám phá phụ kiện laptop. Catalog và tính năng mua sắm sẽ được bổ sung theo lộ trình.</p>
+                <h2>Mua sắm và theo dõi đơn dễ dàng hơn.</h2>
+                <p>Tài khoản khách hàng giúp bạn quản lý giỏ hàng, đặt hàng và nhận hỗ trợ trong cùng một nơi.</p>
                 <p>Đã có tài khoản? <a class="text-link" href="{{ route('login') }}">Đăng nhập</a></p>
             </aside>
             <section class="form-panel" aria-labelledby="register-form-title">

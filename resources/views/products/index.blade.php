@@ -3,9 +3,10 @@
 @section('content')
 <div class="catalog-page">
     <header class="shell catalog-intro">
-        <p class="eyebrow">Catalog phụ kiện</p>
-        <h1>Chọn đúng phụ kiện cho góc làm việc.</h1>
-        <p>Tìm theo tên, SKU, danh mục hoặc thương hiệu. Giá và tồn kho hiển thị từ dữ liệu hiện tại.</p>
+        <div>
+            <h1>Cửa hàng phụ kiện</h1>
+            <p>Tìm theo tên, danh mục hoặc thương hiệu. Giá bán và tình trạng hàng luôn được hiển thị ngay trên từng sản phẩm.</p>
+        </div>
     </header>
 
     <div class="shell catalog-layout">
@@ -55,14 +56,14 @@
                     <p class="section-label">Kết quả</p>
                     <h2 id="catalog-results-title">{{ $products->total() }} sản phẩm</h2>
                 </div>
-                <p>Chỉ hiển thị sản phẩm, danh mục và thương hiệu đang hoạt động.</p>
+                <p>Giá và tồn kho được cập nhật theo dữ liệu hiện tại.</p>
             </header>
 
             @if ($products->isEmpty())
                 <div class="catalog-empty">
                     <h3>{{ $products->total() === 0 ? 'Chưa có sản phẩm phù hợp' : 'Không có sản phẩm ở trang này' }}</h3>
                     <p>Thử thay đổi từ khóa hoặc bộ lọc để xem kết quả khác.</p>
-                    <a class="button button--outline" href="{{ route('products.index') }}">Xem toàn bộ catalog</a>
+                    <a class="button button--outline" href="{{ route('products.index') }}">Xem toàn bộ sản phẩm</a>
                 </div>
             @else
                 <div class="product-grid">
@@ -80,8 +81,8 @@
                                 <p class="product-card__meta">{{ $product->category->name }} · {{ $product->brand->name }}</p>
                                 <h3><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></h3>
                                 <p class="product-card__price">{{ $product->formattedPrice() }}</p>
-                                <p class="product-card__stock">{{ $product->isInStock() ? 'Còn hàng' : 'Tạm hết hàng' }}</p>
-                                <a class="text-link" href="{{ route('products.show', $product) }}">Xem chi tiết</a>
+                                <p class="product-card__stock"><span class="product-stock-dot--{{ $product->isInStock() ? 'available' : 'unavailable' }}" aria-hidden="true"></span>{{ $product->isInStock() ? 'Còn hàng' : 'Tạm hết hàng' }}</p>
+                                <a class="button button--quiet product-card__action" href="{{ route('products.show', $product) }}">Xem sản phẩm</a>
                             </div>
                         </article>
                     @endforeach

@@ -13,7 +13,6 @@
 <div class="shell order-page">
     <header class="page-heading order-page__heading">
         <div>
-            <p class="eyebrow">Tài khoản</p>
             <h1>Đơn hàng của tôi</h1>
             <p>Theo dõi các đơn đã đặt và xem lại thông tin mua hàng tại thời điểm thanh toán.</p>
         </div>
@@ -38,7 +37,7 @@
         <section class="empty-state order-empty" aria-labelledby="order-empty-title">
             <p class="eyebrow">{{ $hasActiveFilters ? 'Không có kết quả' : '0 đơn hàng' }}</p>
             <h2 id="order-empty-title">{{ $hasActiveFilters ? 'Không tìm thấy đơn hàng phù hợp' : 'Bạn chưa có đơn hàng nào' }}</h2>
-            <p>{{ $hasActiveFilters ? 'Hãy điều chỉnh từ khóa hoặc bộ lọc để xem lại các đơn hàng khác.' : 'Khám phá catalog và thêm sản phẩm phù hợp vào giỏ hàng.' }}</p>
+            <p>{{ $hasActiveFilters ? 'Hãy điều chỉnh từ khóa hoặc bộ lọc để xem lại các đơn hàng khác.' : 'Khám phá cửa hàng và thêm sản phẩm phù hợp vào giỏ hàng.' }}</p>
             <div class="action-group">@if($hasActiveFilters)<a class="button button--outline" href="{{ route('orders.index') }}">Xóa bộ lọc</a>@else<a class="button" href="{{ route('products.index') }}">Khám phá sản phẩm</a>@endif</div>
         </section>
     @else

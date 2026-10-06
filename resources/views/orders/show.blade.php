@@ -12,7 +12,7 @@
 <div class="shell order-page order-detail-page">
     <a class="text-link order-back-link" href="{{ route('orders.index') }}">← Đơn hàng của tôi</a>
     <header class="order-detail-header">
-        <div><p class="eyebrow">Chi tiết đơn hàng</p><h1>{{ $order->order_code }}</h1><p>Đặt lúc <time datetime="{{ $order->created_at->toIso8601String() }}">{{ $order->created_at->timezone('Asia/Ho_Chi_Minh')->format('H:i · d/m/Y') }}</time></p></div>
+        <div><h1>{{ $order->order_code }}</h1><p>Đặt lúc <time datetime="{{ $order->created_at->toIso8601String() }}">{{ $order->created_at->timezone('Asia/Ho_Chi_Minh')->format('H:i · d/m/Y') }}</time></p></div>
         <div class="order-detail-header__status"><span class="status-badge {{ $orderBadge }}">{{ $order->status->label() }}</span><span>{{ $order->payment_status->label() }}</span></div>
     </header>
 
@@ -46,7 +46,7 @@
             <form method="POST" action="{{ route('orders.cancellation-request.store', $order->order_code) }}" data-submit-once data-confirm-action="Gửi yêu cầu hủy đơn này?">
                 @csrf
                 <input type="hidden" name="request_key" value="{{ old('request_key', (string) \Illuminate\Support\Str::uuid()) }}">
-                <div class="field"><label for="cancellation-reason">Lý do hủy</label><textarea id="cancellation-reason" name="reason" rows="4" maxlength="500" required>{{ old('reason') }}</textarea>@error('reason', 'cancellationRequest')<p class="field-error" role="alert">{{ $message }}</p>@enderror</div>
+                <div class="field"><label for="cancellation-reason">Lý do hủy</label><textarea id="cancellation-reason" name="reason" rows="4" maxlength="500" required @error('reason', 'cancellationRequest') aria-invalid="true" aria-describedby="cancellation-reason-error" @enderror>{{ old('reason') }}</textarea>@error('reason', 'cancellationRequest')<p id="cancellation-reason-error" class="field-error" role="alert">{{ $message }}</p>@enderror</div>
                 @foreach(['order', 'request_key', 'request', 'authorization'] as $field) @error($field, 'cancellationRequest')<p class="field-error" role="alert">{{ $message }}</p>@enderror @endforeach
                 <button class="button button--quiet" type="submit">Yêu cầu hủy đơn</button>
             </form>

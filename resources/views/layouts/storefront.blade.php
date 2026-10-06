@@ -8,10 +8,9 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endunless
 </head>
-<body>
+<body class="storefront-body">
     <a class="skip-link" href="#main-content">Đi đến nội dung chính</a>
     <header class="site-header">
-        <div class="site-ribbon"><div class="shell">PHỤ KIỆN LAPTOP <span>·</span> CATALOG ĐANG HOÀN THIỆN</div></div>
         <div class="shell header-inner">
             <a class="brand" href="{{ route('home') }}" aria-label="Trạm Phụ Kiện, trang chủ">
                 <span class="brand-mark" aria-hidden="true">TP</span>
@@ -29,9 +28,10 @@
                         <a class="cart-nav-link" href="{{ route('cart.index') }}" @if(request()->routeIs('cart.*')) aria-current="page" @endif>
                             Giỏ hàng <span class="cart-count" aria-label="{{ $cartItemCount }} dòng sản phẩm">{{ $cartItemCount }}</span>
                         </a>
+                        <a href="{{ route('support.show') }}" @if(request()->routeIs('support.*')) aria-current="page" @endif>Hỗ trợ</a>
                     @endif
                     <span class="nav-user" title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</span>
-                    <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
+                    <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Tài khoản</a>
                     <form class="inline-form" method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button class="link-button" type="submit">Đăng xuất</button>
@@ -52,9 +52,10 @@
                 @if (auth()->user()->isCustomer())
                     <a href="{{ route('orders.index') }}" @if(request()->routeIs('orders.*')) aria-current="page" @endif>Đơn hàng của tôi</a>
                     <a href="{{ route('cart.index') }}" @if(request()->routeIs('cart.*')) aria-current="page" @endif>Giỏ hàng ({{ $cartItemCount }})</a>
+                    <a href="{{ route('support.show') }}" @if(request()->routeIs('support.*')) aria-current="page" @endif>Hỗ trợ</a>
                 @endif
                 <span class="nav-user">{{ auth()->user()->name }}</span>
-                <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Dashboard</a>
+                <a href="{{ route('dashboard') }}" @if(request()->routeIs('*.dashboard', 'dashboard')) aria-current="page" @endif>Tài khoản</a>
                 <form class="inline-form" method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="link-button" type="submit">Đăng xuất</button>
@@ -70,14 +71,19 @@
     </main>
     <footer class="site-footer">
         <div class="shell footer-inner">
-            <p><strong>Trạm Phụ Kiện</strong> · Phụ kiện laptop cho góc làm việc mỗi ngày. Catalog sản phẩm và tính năng mua sắm đang được hoàn thiện.</p>
+            <p><strong>Trạm Phụ Kiện</strong> · Phụ kiện máy tính cho học tập, làm việc và giải trí mỗi ngày.</p>
             <nav class="footer-links" aria-label="Điều hướng cuối trang">
                 <a href="{{ route('home') }}">Trang chủ</a>
                 @guest
                     <a href="{{ route('login') }}">Đăng nhập</a>
                     <a href="{{ route('register') }}">Đăng ký</a>
                 @else
-                    <a href="{{ route('dashboard') }}">Dashboard</a>
+                    @if (auth()->user()->isCustomer())
+                        <a href="{{ route('orders.index') }}">Đơn hàng</a>
+                        <a href="{{ route('support.show') }}">Hỗ trợ</a>
+                    @else
+                        <a href="{{ route('dashboard') }}">Khu vực quản lý</a>
+                    @endif
                 @endguest
             </nav>
         </div>

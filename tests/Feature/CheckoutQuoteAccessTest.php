@@ -300,9 +300,9 @@ class CheckoutQuoteAccessTest extends TestCase
             ->assertDontSee('<script>alert(1)</script>', false)
             ->assertSee('action="'.route('checkout.quote').'"', false)
             ->assertSee('name="_token"', false)
-            ->assertSee('Tạo bảng tính tạm thời')
-            ->assertDontSee('Đặt hàng')
-            ->assertDontSee('Thanh toán');
+            ->assertSee('Xem tổng thanh toán')
+            ->assertDontSee('action="'.route('checkout.cod.store').'"', false)
+            ->assertDontSee('action="'.route('checkout.vnpay.initiate').'"', false);
     }
 
     public function test_checkout_renders_linked_validation_summary_and_field_errors(): void

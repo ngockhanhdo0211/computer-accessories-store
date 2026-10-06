@@ -1,4 +1,6 @@
-/* Hallmark · design-system: design.md · genre: modern minimal · theme: Grid · ultramarine */
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4
+ * design-system: design.md · genre: modern-minimal · theme: light retail · anchor: ultramarine
+ */
 :root {
   --color-paper: oklch(98% 0.006 93);
   --color-paper-muted: oklch(95% 0.009 93);
@@ -54,4 +56,13 @@
   --ease-in-out: cubic-bezier(0.45, 0, 0.25, 1);
   --container: 76rem;
   --content: 42rem;
+}
+
+.storefront-body {
+  --color-surface: oklch(99% 0.004 93);
+  --color-line-strong: oklch(70% 0.018 255);
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --shadow-card: 0 16px 34px -30px oklch(20% 0.018 255 / 0.32);
+  --container: 82rem;
 }

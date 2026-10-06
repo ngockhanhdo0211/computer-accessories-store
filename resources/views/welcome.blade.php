@@ -3,67 +3,59 @@
 @section('title', 'Phụ kiện laptop cho góc làm việc')
 
 @section('content')
-    <div class="shell shop-home">
+    <div class="shop-home">
         <section class="shop-hero" aria-labelledby="home-title">
+            <div class="shell shop-hero__inner">
             <div class="shop-hero__copy">
-                <p class="eyebrow">Cửa hàng phụ kiện laptop</p>
-                <h1 id="home-title">Góc làm việc tốt hơn bắt đầu từ phụ kiện đúng.</h1>
-                <p class="shop-hero__lede">Bàn phím, chuột, hub kết nối và những món đồ nhỏ giúp chiếc laptop của bạn làm được nhiều hơn. Trạm Phụ Kiện đang chuẩn bị catalog để bạn lựa chọn dễ dàng.</p>
+                <p class="shop-hero__category">Phụ kiện máy tính chọn lọc</p>
+                <h1 id="home-title">Hoàn thiện góc máy của bạn.</h1>
+                <p class="shop-hero__lede">Khám phá bàn phím, chuột, hub kết nối và phụ kiện thiết thực với giá bán, ưu đãi và tình trạng hàng được hiển thị rõ ràng.</p>
                 <div class="hero-actions">
+                    <a class="button" href="{{ route('products.index') }}">Mua sắm ngay</a>
                     @guest
-                        <a class="button" href="{{ route('register') }}">Tạo tài khoản</a>
-                        <a class="text-link" href="{{ route('login') }}">Đã có tài khoản? Đăng nhập</a>
+                        <a class="button button--quiet" href="{{ route('register') }}">Tạo tài khoản</a>
                     @else
-                        <a class="button" href="{{ route('dashboard') }}">Vào dashboard</a>
+                        @if(auth()->user()->isCustomer())
+                            <a class="button button--quiet" href="{{ route('cart.index') }}">Xem giỏ hàng</a>
+                        @endif
                     @endguest
                 </div>
-                <p class="shop-hero__note">Tài khoản đã sẵn sàng · Sản phẩm đang được cập nhật</p>
+                <ul class="shop-hero__benefits" aria-label="Lợi ích mua sắm">
+                    <li>Giá bán minh bạch</li>
+                    <li>Tồn kho cập nhật</li>
+                    <li>COD và VNPay Sandbox</li>
+                </ul>
             </div>
             <figure class="shop-hero__image">
                 <img src="{{ asset('images/laptop-accessories-hero.jpg') }}" alt="Bộ phụ kiện laptop gồm bàn phím, chuột, hub kết nối và giá đỡ trên bàn làm việc" width="1536" height="1024" fetchpriority="high">
-                <figcaption>Phụ kiện cho mọi nhịp làm việc</figcaption>
+                <figcaption>Phụ kiện thiết thực cho góc máy mỗi ngày</figcaption>
             </figure>
+            </div>
         </section>
 
-        <section class="shop-range" aria-labelledby="category-title">
+        <section class="shell shop-range" aria-labelledby="category-title">
             <div class="shop-section-intro">
-                <p class="section-label">Nhóm phụ kiện</p>
-                <h2 id="category-title">Những mảnh ghép cho một setup gọn hơn.</h2>
-                <p>Các nhóm hàng dưới đây là định hướng của cửa hàng. Catalog sản phẩm công khai đang được hoàn thiện.</p>
+                <h2 id="category-title">Mua sắm rõ ràng từ sản phẩm đến thanh toán.</h2>
+                <p>Mỗi sản phẩm đều có thông tin giá, thương hiệu và tồn kho để bạn so sánh trước khi thêm vào giỏ.</p>
+                <a class="text-link" href="{{ route('products.index') }}">Xem toàn bộ sản phẩm</a>
             </div>
-            <ul class="shop-range__list" aria-label="Nhóm hàng dự kiến">
-                <li><strong>Bàn phím &amp; chuột</strong><span>Thao tác mỗi ngày</span></li>
-                <li><strong>Hub &amp; cáp kết nối</strong><span>Mở rộng không gian làm việc</span></li>
-                <li><strong>Giá đỡ &amp; phụ kiện bàn</strong><span>Sắp xếp góc làm việc</span></li>
-                <li><strong>Âm thanh &amp; webcam</strong><span>Họp, học và giải trí</span></li>
+            <ul class="shop-range__list" aria-label="Trải nghiệm mua sắm">
+                <li><strong>Chọn sản phẩm</strong><span>Lọc theo danh mục và thương hiệu</span></li>
+                <li><strong>Kiểm tra giỏ hàng</strong><span>Xem đơn giá, số lượng và thành tiền</span></li>
+                <li><strong>Nhận báo giá</strong><span>Áp dụng phí giao hàng và mã giảm giá</span></li>
+                <li><strong>Theo dõi đơn</strong><span>Xem trạng thái và lịch sử xử lý</span></li>
             </ul>
         </section>
 
-        <section class="shop-progress" aria-labelledby="journey-title">
+        <section class="shell shop-cta" aria-labelledby="account-title">
             <div>
-                <p class="section-label">Đang phát triển</p>
-                <h2 id="journey-title">Một cửa hàng được xây từ những bước cần thiết.</h2>
-            </div>
-            <div class="shop-progress__body">
-                <p>Đăng ký và đăng nhập đã hoạt động. Quản lý danh mục dành cho Admin đã có. Xem sản phẩm, giỏ hàng và thanh toán sẽ xuất hiện ở các giai đoạn tiếp theo.</p>
-                <ol class="shop-progress__steps">
-                    <li><span>Đã có</span><strong>Tài khoản khách hàng</strong></li>
-                    <li><span>Đã có</span><strong>Danh mục quản trị</strong></li>
-                    <li><span>Tiếp theo</span><strong>Catalog và mua sắm</strong></li>
-                </ol>
-            </div>
-        </section>
-
-        <section class="shop-cta" aria-labelledby="account-title">
-            <div>
-                <p class="section-label">Trạm Phụ Kiện</p>
-                <h2 id="account-title">Bắt đầu với tài khoản của bạn.</h2>
-                <p>Tạo tài khoản ngay hôm nay để sẵn sàng khi cửa hàng mở thêm các tính năng mua sắm.</p>
+                <h2 id="account-title">Sẵn sàng chọn phụ kiện phù hợp?</h2>
+                <p>Tạo tài khoản để lưu giỏ hàng, đặt hàng và theo dõi tiến trình giao hàng.</p>
             </div>
             @guest
-                <a class="button button--light" href="{{ route('register') }}">Đăng ký khách hàng</a>
+                <a class="button button--light" href="{{ route('register') }}">Tạo tài khoản</a>
             @else
-                <a class="button button--light" href="{{ route('dashboard') }}">Mở dashboard</a>
+                <a class="button button--light" href="{{ route('products.index') }}">Xem sản phẩm</a>
             @endguest
         </section>
     </div>

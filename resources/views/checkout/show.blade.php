@@ -1,13 +1,12 @@
 @extends('layouts.storefront')
-@section('title', 'Báo giá checkout')
+@section('title', 'Thanh toán')
 @section('content')
 <div class="checkout-page shell">
     <header class="checkout-header">
         <div>
-            <p class="eyebrow">Checkout Quote Foundation</p>
-            <h1>Thông tin nhận hàng và bảng tính tạm thời.</h1>
+            <h1>Thanh toán</h1>
         </div>
-        <p>Server đọc lại giỏ hàng, giá, tồn khả dụng, phí vận chuyển và mã giảm giá mỗi lần bạn yêu cầu báo giá.</p>
+        <p>Nhập địa chỉ nhận hàng để xem phí vận chuyển, ưu đãi và tổng tiền trước khi đặt hàng.</p>
     </header>
 
     @if ($errors->any())
@@ -56,9 +55,9 @@
 
     @if ($quote)
         <section class="checkout-quote-status" aria-labelledby="quote-status-title">
-            <p class="section-label">Đã tính lúc {{ $quote->quotedAt->timezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y') }}</p>
-            <h2 id="quote-status-title">Bảng tính tạm thời</h2>
-            <p>Đây chưa phải đơn hàng và chưa giữ tồn kho hoặc lượt dùng mã. Hệ thống sẽ xác minh lại dữ liệu khi bạn chọn COD hoặc khởi tạo VNPay.</p>
+            <p class="section-label">Cập nhật lúc {{ $quote->quotedAt->timezone('Asia/Ho_Chi_Minh')->format('H:i d/m/Y') }}</p>
+            <h2 id="quote-status-title">Báo giá đã sẵn sàng</h2>
+            <p>Hãy kiểm tra tổng tiền và chọn phương thức thanh toán. Giá, tồn kho và ưu đãi sẽ được xác nhận lại khi đặt hàng.</p>
         </section>
     @endif
 
@@ -69,7 +68,7 @@
             <header class="checkout-section-heading">
                 <p class="section-label">Người nhận</p>
                 <h2>Thông tin giao hàng</h2>
-                <p>Thông tin này chỉ dùng để tạo báo giá hiện tại và không ghi đè hồ sơ tài khoản.</p>
+                <p>Thông tin này dùng để tính phí giao hàng và sẽ được lưu nếu bạn đặt đơn; hồ sơ tài khoản không thay đổi.</p>
             </header>
 
             <div class="form-grid checkout-form-grid">
@@ -88,7 +87,7 @@
                 <div class="field field--full">
                     <label for="recipient_email">Email người nhận <span class="required-hint">(bắt buộc)</span></label>
                     <input id="recipient_email" name="recipient_email" type="email" maxlength="255" autocomplete="email" value="{{ old('recipient_email', $form['recipient_email'] ?? '') }}" aria-describedby="recipient-email-message" @error('recipient_email') aria-invalid="true" @enderror required>
-                    <p id="recipient-email-message" class="field-message @error('recipient_email') field-error @enderror">@error('recipient_email'){{ $message }}@else Dùng cho thông tin giao dịch ở các slice sau. @enderror</p>
+                    <p id="recipient-email-message" class="field-message @error('recipient_email') field-error @enderror">@error('recipient_email'){{ $message }}@else Dùng để nhận thông tin liên quan đến đơn hàng. @enderror</p>
                 </div>
 
                 <div class="field">
@@ -118,12 +117,12 @@
                 <div class="field field--full">
                     <label for="coupon_code">Mã giảm giá <span class="required-hint">(không bắt buộc)</span></label>
                     <input id="coupon_code" name="coupon_code" type="text" maxlength="80" autocomplete="off" value="{{ old('coupon_code', $form['coupon_code'] ?? '') }}" aria-describedby="coupon-code-message" @error('coupon_code') aria-invalid="true" @enderror>
-                    <p id="coupon-code-message" class="field-message @error('coupon_code') field-error @enderror">@error('coupon_code'){{ $message }}@else Báo giá đánh giá định nghĩa mã hiện tại nhưng chưa giữ hoặc tiêu thụ lượt dùng. @enderror</p>
+                    <p id="coupon-code-message" class="field-message @error('coupon_code') field-error @enderror">@error('coupon_code'){{ $message }}@else Nhập mã nếu bạn có; ưu đãi hợp lệ sẽ xuất hiện trong phần tổng tiền. @enderror</p>
                 </div>
             </div>
 
             <div class="checkout-form-actions">
-                <button class="button" type="submit">{{ $quote ? 'Tính lại báo giá' : 'Tạo bảng tính tạm thời' }}</button>
+                <button class="button" type="submit">{{ $quote ? 'Cập nhật báo giá' : 'Xem tổng thanh toán' }}</button>
                 <a class="button button--quiet" href="{{ route('cart.index') }}">Quay lại giỏ hàng</a>
             </div>
         </form>
@@ -201,7 +200,7 @@
                     @include('checkout._vnpay-form')
                 </section>
             @else
-                <p class="checkout-summary__note">Nhập thông tin nhận hàng để server xác định vùng phí và tạo bảng tính.</p>
+                <p class="checkout-summary__note">Nhập thông tin nhận hàng để xem phí vận chuyển và tổng thanh toán.</p>
             @endif
         </aside>
     </div>

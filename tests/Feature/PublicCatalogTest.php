@@ -18,7 +18,7 @@ class PublicCatalogTest extends TestCase
 
     public function test_guest_and_every_authenticated_role_can_open_catalog(): void
     {
-        $this->get(route('products.index'))->assertOk()->assertSee('Catalog phụ kiện');
+        $this->get(route('products.index'))->assertOk()->assertSee('Cửa hàng phụ kiện');
 
         foreach ([User::factory()->create(), User::factory()->employee()->create(), User::factory()->admin()->create()] as $user) {
             $this->actingAs($user)->get(route('products.index'))->assertOk();

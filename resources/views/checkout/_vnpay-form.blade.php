@@ -10,8 +10,8 @@
     <input type="hidden" name="address_line" value="{{ $quote->recipient->addressLine }}">
     <input type="hidden" name="coupon_code" value="{{ $quote->coupon?->code }}">
     <div>
-        <strong>Thanh toán VNPay</strong>
-        <p>Bạn sẽ được chuyển sang cổng VNPay Sandbox. Đơn hàng chỉ được tạo sau khi kết quả được xác minh ở bước callback sau.</p>
+        <strong>VNPay Sandbox</strong>
+        <p>Môi trường thử nghiệm, không dùng thẻ hoặc tiền thật. Đơn hàng được tạo sau khi VNPay xác nhận thanh toán.</p>
     </div>
     <button class="button" type="submit" data-submit-label="Đang chuyển sang VNPay…" @disabled(! $vnpayAvailable)>Chuyển sang cổng VNPay</button>
     @unless($vnpayAvailable)

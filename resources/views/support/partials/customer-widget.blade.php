@@ -9,7 +9,7 @@
     </button>
     <section id="support-chat-panel" class="support-panel" aria-label="Hỗ trợ khách hàng" data-support-panel hidden>
         <header class="support-panel__header">
-            <div><strong>Hỗ trợ khách hàng</strong><span>Admin và nhân viên hỗ trợ sẽ cùng phản hồi.</span></div>
+            <div><strong>Hỗ trợ khách hàng</strong><span>Đội ngũ cửa hàng sẽ phản hồi tại đây.</span></div>
             <button type="button" class="support-panel__close" aria-label="Đóng hỗ trợ khách hàng" data-support-close>×</button>
         </header>
         <button type="button" class="support-load-older" data-support-older hidden>Tải tin nhắn cũ hơn</button>
@@ -20,9 +20,9 @@
             @csrf
             <input type="hidden" name="client_message_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
             <label for="support-customer-content">Tin nhắn</label>
-            <textarea id="support-customer-content" name="content" maxlength="2000" rows="3" placeholder="Bạn cần hỗ trợ điều gì?" required></textarea>
-            <p class="support-composer__hint">Enter để gửi · Shift+Enter để xuống dòng</p>
-            <div class="support-composer__actions"><span class="field-error" data-support-error role="alert"></span><button class="button" type="submit">Gửi tin nhắn</button></div>
+            <textarea id="support-customer-content" name="content" maxlength="2000" rows="3" placeholder="Bạn cần hỗ trợ điều gì?" aria-describedby="support-customer-hint support-customer-error" required></textarea>
+            <p id="support-customer-hint" class="support-composer__hint">Enter để gửi · Shift+Enter để xuống dòng</p>
+            <div class="support-composer__actions"><span id="support-customer-error" class="field-error" data-support-error role="alert"></span><button class="button" type="submit">Gửi tin nhắn</button></div>
         </form>
     </section>
 </div>

@@ -28,14 +28,14 @@
         </section>
 
         <section class="product-detail__info">
-            <p class="eyebrow">{{ $product->category->name }} / {{ $product->brand->name }}</p>
+            <p class="product-detail__meta">{{ $product->category->name }} · {{ $product->brand->name }}</p>
             <h1>{{ $product->name }}</h1>
             <p class="product-detail__sku">SKU {{ $product->sku }}</p>
             <p class="product-detail__price">{{ $product->formattedPrice() }}</p>
             @if ($product->hasValidSalePrice())
                 <p class="product-detail__original-price">Giá gốc: <s>{{ number_format($product->price_vnd, 0, ',', '.') }} ₫</s></p>
             @endif
-            <p class="product-detail__stock">{{ $availableQuantity > 0 ? "Còn hàng · {$availableQuantity} sản phẩm khả dụng" : 'Tạm hết hàng' }}</p>
+            <p class="product-detail__stock"><span class="product-stock-dot--{{ $availableQuantity > 0 ? 'available' : 'unavailable' }}" aria-hidden="true"></span>{{ $availableQuantity > 0 ? "Còn hàng · {$availableQuantity} sản phẩm khả dụng" : 'Tạm hết hàng' }}</p>
 
             @if ($availableQuantity > 0)
                 @auth
@@ -60,7 +60,7 @@
                 <h2>Thông tin sản phẩm</h2>
                 <p>{!! nl2br(e($product->description)) !!}</p>
             </div>
-            <a class="button button--outline" href="{{ route('products.index') }}">Quay lại catalog</a>
+            <a class="button button--outline" href="{{ route('products.index') }}">Quay lại cửa hàng</a>
         </section>
     </div>
 </div>

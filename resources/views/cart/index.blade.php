@@ -4,10 +4,9 @@
 <div class="cart-page shell">
     <header class="cart-header">
         <div>
-            <p class="eyebrow">Giỏ hàng của bạn</p>
-            <h1>Kiểm tra phụ kiện trước bước thanh toán.</h1>
+            <h1>Giỏ hàng</h1>
         </div>
-        <p>Giá và tồn khả dụng được tính lại từ dữ liệu hiện tại. Giỏ hàng chưa giữ tồn kho.</p>
+        <p>Kiểm tra sản phẩm, số lượng và thành tiền trước khi nhận báo giá giao hàng.</p>
     </header>
 
     @error('cart')
@@ -18,7 +17,7 @@
         <section class="cart-empty" aria-labelledby="empty-cart-title">
             <p class="section-label">Chưa có sản phẩm</p>
             <h2 id="empty-cart-title">Giỏ hàng đang trống.</h2>
-            <p>Khám phá catalog và chọn phụ kiện phù hợp với góc làm việc của bạn.</p>
+            <p>Khám phá cửa hàng và chọn phụ kiện phù hợp với góc làm việc của bạn.</p>
             <a class="button" href="{{ route('products.index') }}">Xem sản phẩm</a>
         </section>
     @else
@@ -26,14 +25,22 @@
             <section class="cart-lines" aria-label="Sản phẩm trong giỏ">
                 @foreach ($items as $row)
                     <article class="cart-line">
-                        <a class="cart-line__image" href="{{ $row['isPublic'] ? route('products.show', $row['product']) : route('cart.index') }}" @unless($row['isPublic']) aria-disabled="true" @endunless>
+                        @if ($row['isPublic'])
+                            <a class="cart-line__image" href="{{ route('products.show', $row['product']) }}">
+                        @else
+                            <div class="cart-line__image">
+                        @endif
                             @if ($row['product']->primaryImage)
                                 <img src="{{ $row['product']->primaryImage->url() }}" alt="{{ $row['product']->primaryImage->alt_text ?: $row['product']->name }}" data-image-fallback>
                                 <span class="product-image-placeholder" hidden>Không tải được ảnh</span>
                             @else
                                 <span class="product-image-placeholder">Chưa có ảnh</span>
                             @endif
-                        </a>
+                        @if ($row['isPublic'])
+                            </a>
+                        @else
+                            </div>
+                        @endif
 
                         <div class="cart-line__main">
                             <p class="cart-line__meta">{{ $row['product']->category?->name }} · {{ $row['product']->brand?->name }}</p>

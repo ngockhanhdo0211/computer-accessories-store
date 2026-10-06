@@ -52,9 +52,80 @@ class StorefrontUiTest extends TestCase
         $response->assertOk()
             ->assertSee($user->name)
             ->assertSee('href="'.route('dashboard').'"', false)
+            ->assertSee('href="'.route('cart.index').'"', false)
+            ->assertSee('href="'.route('orders.index').'"', false)
+            ->assertSee('href="'.route('support.show').'"', false)
             ->assertSee('method="POST" action="'.route('logout').'"', false)
             ->assertDontSee('href="'.route('logout').'"', false)
             ->assertDontSee('href="'.route('register').'"', false);
+    }
+
+    public function test_customer_facing_entry_pages_do_not_expose_internal_delivery_language(): void
+    {
+        $technicalCopy = [
+            'Đã triển khai',
+            'Chưa triển khai',
+            'Foundation',
+            'Callback',
+            'Writer',
+            'Projection',
+            'Catalog đang hoàn thiện',
+        ];
+
+        foreach (['/', '/login', '/register', '/products'] as $uri) {
+            $response = $this->get($uri)->assertOk();
+
+            foreach ($technicalCopy as $copy) {
+                $response->assertDontSee($copy);
+            }
+        }
+    }
+
+    public function test_storefront_styles_define_responsive_catalogue_and_purchase_workbench_contracts(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+        $tokens = file_get_contents(base_path('tokens.css'));
+
+        $this->assertIsString($css);
+        $this->assertIsString($tokens);
+        $tokens = str_replace("\r\n", "\n", $tokens);
+        $this->assertStringContainsString('html, body { overflow-x: clip; }', $css);
+        $this->assertStringContainsString('.shop-hero { display: block;', $css);
+        $this->assertStringContainsString('.shop-hero__inner { display: grid;', $css);
+        $this->assertStringContainsString('.catalog-layout { grid-template-columns: 15rem minmax(0, 1fr);', $css);
+        $this->assertStringContainsString('grid-template-columns: repeat(3, minmax(0, 1fr));', $css);
+        $this->assertStringContainsString('@media (max-width: 48rem)', $css);
+        $this->assertStringContainsString('.storefront-body .support-panel { position: fixed;', $css);
+        $this->assertStringContainsString('.storefront-body .page-intro {', $css);
+        $this->assertStringContainsString('.storefront-body .order-panel {', $css);
+        $this->assertStringContainsString('.storefront-body .support-composer {', $css);
+        $this->assertStringNotContainsString("\n  .support-panel { position: fixed;", $css);
+        $this->assertStringContainsString("--container: 76rem;\n", $tokens);
+        $this->assertStringContainsString(".storefront-body {\n  --color-surface:", $tokens);
+        $this->assertStringContainsString("  --container: 82rem;\n", $tokens);
+    }
+
+    public function test_customer_accessibility_hooks_remain_connected_after_the_refresh(): void
+    {
+        $customer = User::factory()->create();
+
+        $this->actingAs($customer)
+            ->get('/')
+            ->assertOk()
+            ->assertSee('aria-describedby="support-customer-hint support-customer-error"', false)
+            ->assertSee('id="support-customer-hint"', false)
+            ->assertSee('id="support-customer-error"', false)
+            ->assertSee('data-support-chat', false)
+            ->assertSee('data-support-form', false)
+            ->assertSee('name="client_message_key"', false);
+
+        $orderView = file_get_contents(resource_path('views/orders/show.blade.php'));
+        $cartView = file_get_contents(resource_path('views/cart/index.blade.php'));
+
+        $this->assertIsString($orderView);
+        $this->assertStringContainsString('aria-describedby="cancellation-reason-error"', $orderView);
+        $this->assertStringContainsString('id="cancellation-reason-error"', $orderView);
+        $this->assertStringNotContainsString('aria-disabled="true"', $cartView);
     }
 
     public function test_auth_forms_keep_csrf_fields_and_never_echo_passwords(): void

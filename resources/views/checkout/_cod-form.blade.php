@@ -11,7 +11,7 @@
     <input type="hidden" name="coupon_code" value="{{ $quote->coupon?->code }}">
     <div>
         <strong>Thanh toán khi nhận hàng (COD)</strong>
-        <p>Giá, tồn kho, phí vận chuyển và mã giảm giá sẽ được kiểm tra lại trước khi tạo đơn.</p>
+        <p>Thanh toán cho đơn vị giao hàng khi nhận sản phẩm.</p>
     </div>
     <button class="button" type="submit" data-submit-label="Đang tạo đơn…">Đặt hàng COD</button>
 </form>

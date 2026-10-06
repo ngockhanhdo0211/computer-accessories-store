@@ -2,38 +2,44 @@
 
 ## Định hướng
 
-Website bán phụ kiện laptop với cảm giác cửa hàng công nghệ gọn, rõ và đáng tin. Giao diện chỉ mô tả những chức năng đã có. Catalog hiển thị sản phẩm, giá, ảnh và tồn kho từ dữ liệu thật; không hiển thị nút mua, đánh giá hoặc số liệu thương mại chưa được triển khai.
+Website bán phụ kiện máy tính với cảm giác cửa hàng công nghệ gọn, rõ và đáng tin. Giao diện chỉ mô tả những chức năng đã có, dùng dữ liệu và trạng thái thật. Hành trình khách hàng hiện bao gồm khám phá sản phẩm, giỏ hàng, báo giá, COD hoặc VNPay Sandbox, theo dõi đơn và trò chuyện hỗ trợ.
 
 ## Hệ thống chung
 
 - **Thể loại:** modern minimal cho retail công nghệ.
 - **Màu:** giấy sáng hơi ấm, mực graphite và ultramarine hiện có làm điểm nhấn. Dùng token trong `tokens.css` cho mọi màu.
 - **Chữ:** Bahnschrift cho tiêu đề và số; Segoe UI cho nội dung. Không dùng chữ nghiêng ở tiêu đề.
-- **Nhịp:** lưới đều, đường kẻ mảnh, khoảng trắng có chủ đích. Khu vực quản trị ưu tiên mật độ dữ liệu; trang chủ ưu tiên hình ảnh sản phẩm và CTA thực.
+- **Nhịp:** lưới đều, đường kẻ mảnh, bề mặt sáng và khoảng trắng có chủ đích. Khu vực quản trị ưu tiên mật độ dữ liệu; storefront ưu tiên sản phẩm, giá, tồn kho và thao tác mua thật.
+- **Bề mặt:** nền giấy trung tính cho canvas, bề mặt sáng cho card và form, viền xám rõ nhưng nhẹ. Ultramarine dùng cho CTA chính, trạng thái focus và điểm định hướng; không dùng mảng tối lớn chỉ để trang trí.
+- **Kiến trúc:** storefront dùng macrostructure Catalogue cho khám phá và Workbench cho giỏ hàng, thanh toán, đơn hàng, hỗ trợ. Header ngang gọn và footer inline dùng xuyên suốt hành trình khách hàng.
 - **Chuyển động:** chỉ phản hồi hover/active ngắn; hỗ trợ reduced motion.
 - **Điều hướng:** giữ các route và quyền hiện tại, nút dẫn chỉ tới chức năng đã tồn tại.
 
 ## Các họ trang
 
-- **Trang chủ:** ảnh phụ kiện laptop làm điểm nhìn; phần mô tả rõ hiện trạng, nhóm hàng định hướng và lời mời tạo tài khoản. Không tạo product card giả.
-- **Tài khoản:** tiêu đề ngắn, form là trọng tâm, thông tin hỗ trợ đặt cạnh form trên desktop; trên mobile ưu tiên form và ẩn nội dung hỗ trợ trùng lặp.
+- **Trang chủ:** hero hai cột vừa phải với ảnh phụ kiện thật, một CTA mua sắm chính và lợi ích có thể kiểm chứng. Phần dưới giải thích ngắn hành trình mua hiện có; không dùng card sản phẩm hoặc số liệu giả.
+- **Tài khoản:** tiêu đề ngắn, form là trọng tâm, thông tin hỗ trợ đặt cạnh form trên desktop và chuyển xuống sau form ở màn hẹp.
 - **Dashboard:** số liệu hoặc trạng thái thật, không mô phỏng doanh thu/đơn hàng.
 - **Category/Brand:** danh sách dễ quét và form rõ nhãn, lỗi, trạng thái.
-- **Catalog công khai:** cấu trúc editorial hai cột với bộ lọc tách khỏi lưới sản phẩm; ảnh là điểm nhìn, giá và tồn kho dễ quét, placeholder trung thực; mobile chuyển về một cột.
+- **Catalog công khai:** cấu trúc hai cột với bộ lọc gọn và lưới sản phẩm dạng retail card; ảnh, tên, giá, tồn kho và CTA có thứ bậc rõ. Desktop dùng ba cột khi đủ chỗ, tablet hai cột, mobile một cột.
+- **Chi tiết sản phẩm:** gallery chiếm vùng rộng hơn, panel mua hàng có giá và tồn kho nổi bật, quantity và CTA dùng được bằng bàn phím; không che giấu trạng thái hết hàng.
 - **Product Admin:** workbench mật độ vừa, hàng dữ liệu thay cho card dashboard; form chia thông tin và media, thư viện ảnh có thứ tự/primary rõ ràng.
 - **Inventory:** workbench bảng dữ liệu thật, badge còn/sắp hết/hết hàng, form tác vụ tách khỏi Product, ledger dạng timeline chỉ đọc và danh sách phê duyệt có trạng thái bằng chữ.
-- **Cart:** bố cục danh sách sản phẩm và summary bất đối xứng, giá/tồn khả dụng từ dữ liệu thật, quantity dùng được bằng bàn phím, cảnh báo item không hợp lệ và empty state có đường về catalog; không hiển thị checkout giả.
+- **Cart:** bố cục danh sách sản phẩm và summary bất đối xứng, giá/tồn khả dụng từ dữ liệu thật, quantity dùng được bằng bàn phím, cảnh báo item không hợp lệ và empty state có đường về cửa hàng.
+- **Checkout:** Workbench hai vùng, form giao hàng là nội dung chính và summary sticky trên laptop. Báo giá, coupon, COD và VNPay Sandbox dùng đúng trạng thái thật, error bag và request key riêng; không diễn giải cơ chế nội bộ cho khách hàng.
+- **Order:** danh sách có bộ lọc và card dễ quét; chi tiết đơn ưu tiên sản phẩm, trạng thái, người nhận, timeline và tổng tiền. Yêu cầu hủy chỉ xuất hiện đúng điều kiện nghiệp vụ hiện có.
+- **Support Chat:** trang vào hỗ trợ và widget dùng chung một hội thoại thật; composer luôn tiếp cận được, nội dung động escape và trạng thái đóng/mở không che thao tác chính ở màn hẹp.
 - **Shipping Rate:** workbench quản trị hai vùng cố định, nhấn mạnh mức phí VND thật và form chỉnh sửa đơn trường; không mô phỏng Checkout hoặc ưu đãi.
 - **Coupon Definition:** ledger quản trị mã và editor target theo scope trong workspace; không hiển thị lượt dùng giả hoặc mô phỏng luồng Apply Coupon/Checkout.
 - **Admin/Employee Workspace:** sidebar trái theo role, topbar gọn và main workbench rộng; desktop cố định, mobile dùng drawer có overlay, Escape, focus trap và scroll lock. Storefront tiếp tục dùng header ngang.
 
 ## Thành phần dùng chung
 
-Storefront header, workspace sidebar/topbar, wordmark, footer, button, form, focus ring và thông báo dùng chung token. Mọi trang hỗ trợ 320px trở lên; link và nút không xuống dòng. Lỗi biểu mẫu hiển thị cạnh trường; tên người dùng luôn được Blade escape.
+Storefront header, workspace sidebar/topbar, wordmark, footer, button, form, focus ring và thông báo dùng chung token. Control tương tác có chiều cao tối thiểu 44px, focus nhìn thấy rõ, giá dùng số tabular. Mọi trang hỗ trợ 320px trở lên và không tràn ngang; lỗi/helper text nằm cạnh trường; nội dung động luôn được Blade escape.
 
 ## Ranh giới
 
-Product Catalog, Inventory Foundation và Customer Cart dùng visual system này mà không thêm package hay dữ liệu giả. Cart chỉ quản lý dòng hàng, giá và tồn khả dụng hiện tại; stock reservation, checkout, order, payment, refund, coupon usage và review chưa có, nên không tạo CTA hoặc số liệu cho các phần đó.
+Visual system này bao phủ Storefront, Catalog, Product Detail, Authentication, Cart, Checkout, VNPay Return, Customer Order và Support Chat mà không thêm package hay dữ liệu giả. UI không thay đổi route, quyền, request key, idempotency, error bag hoặc nghiệp vụ phía server. VNPay trên giao diện hiện được mô tả rõ là Sandbox; Refund, Review và các chức năng chưa có route khách hàng không được dựng CTA giả.
 
 ## Exports
 

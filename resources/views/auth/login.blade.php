@@ -5,15 +5,14 @@
 @section('content')
     <div class="shell">
         <header class="page-intro">
-            <p class="eyebrow">Tài khoản / Đăng nhập</p>
             <h1>Đăng nhập</h1>
-            <p>Đăng nhập để quản lý tài khoản của bạn tại Trạm Phụ Kiện.</p>
+            <p>Tiếp tục mua sắm, theo dõi đơn hàng và trò chuyện với đội ngũ hỗ trợ.</p>
         </header>
         <div class="auth-layout">
             <aside class="auth-aside">
-                <h2>Trở lại góc làm việc của bạn.</h2>
-                <p>Phụ kiện laptop, tài khoản và các công cụ quản lý sẽ cùng ở một nơi khi catalog được hoàn thiện.</p>
-                <a class="text-link" href="{{ route('home') }}">Về trang chủ</a>
+                <h2>Mọi đơn hàng ở cùng một nơi.</h2>
+                <p>Đăng nhập để xem giỏ hàng, trạng thái thanh toán và lịch sử giao hàng của bạn.</p>
+                <a class="text-link" href="{{ route('products.index') }}">Xem cửa hàng</a>
             </aside>
             <section class="form-panel" aria-labelledby="login-form-title">
                 <h2 id="login-form-title">Thông tin đăng nhập</h2>
