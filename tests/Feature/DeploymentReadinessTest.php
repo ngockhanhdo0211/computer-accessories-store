@@ -333,6 +333,19 @@ class DeploymentReadinessTest extends TestCase
         $this->assertStringNotContainsString('computer-accessories-store/qa', $render);
     }
 
+    public function test_docker_runtime_grants_apache_worker_access_to_render_secret_files(): void
+    {
+        $dockerfile = file_get_contents(base_path('Dockerfile'));
+
+        $this->assertIsString($dockerfile);
+        $this->assertStringContainsString('getent group 1000', $dockerfile);
+        $this->assertStringContainsString('groupadd --gid 1000 render-secrets', $dockerfile);
+        $this->assertStringContainsString('usermod --append --groups "$render_secrets_group" www-data', $dockerfile);
+        $this->assertStringContainsString("id -G www-data | tr ' ' '\\n' | grep -qx '1000'", $dockerfile);
+        $this->assertStringNotContainsString('/etc/secrets', $dockerfile);
+        $this->assertStringNotContainsString('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT=false', $dockerfile);
+    }
+
     public function test_local_request_without_forwarded_headers_remains_http(): void
     {
         Route::get('/deployment-local-url-probe', fn () => response()->json([

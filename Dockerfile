@@ -53,6 +53,14 @@ RUN apt-get update \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
+RUN render_secrets_group="$(getent group 1000 | cut -d: -f1)" \
+    && if [ -z "$render_secrets_group" ]; then \
+        groupadd --gid 1000 render-secrets; \
+        render_secrets_group=render-secrets; \
+    fi \
+    && usermod --append --groups "$render_secrets_group" www-data \
+    && id -G www-data | tr ' ' '\n' | grep -qx '1000'
+
 WORKDIR /var/www/html
 
 COPY --chown=www-data:www-data app ./app
