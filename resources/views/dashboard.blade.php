@@ -3,6 +3,30 @@
 @section('title', 'Dashboard')
 
 @section('content')
+@if(auth()->user()->isEmployee())
+    <div class="shell employee-dashboard">
+        <header class="page-heading employee-dashboard__heading">
+            <div>
+                <p class="eyebrow">Ca làm việc</p>
+                <h1>Xin chào, {{ auth()->user()->name }}</h1>
+                <p>Chọn khu vực cần xử lý trong ca làm việc hiện tại.</p>
+            </div>
+            <span class="role-tag">{{ auth()->user()->role->label() }}</span>
+        </header>
+
+        <nav class="employee-dashboard__tasks" aria-label="Công việc vận hành">
+            <a class="employee-task employee-task--primary" href="{{ route('employee.orders.index') }}"><span>01</span><strong>Đơn hàng</strong><small>Tra cứu và cập nhật tiến trình</small></a>
+            <a class="employee-task" href="{{ route('inventory.index') }}"><span>02</span><strong>Tồn kho</strong><small>Kiểm tra và ghi nhận biến động</small></a>
+            <a class="employee-task" href="{{ route('employee.order-cancellation-requests.index') }}"><span>03</span><strong>Yêu cầu hủy</strong><small>Xem và xử lý yêu cầu mới</small></a>
+            <a class="employee-task" href="{{ route('employee.support.index') }}"><span>04</span><strong>Hỗ trợ khách hàng</strong><small>Tiếp tục các hội thoại cần phản hồi</small></a>
+        </nav>
+
+        <div class="employee-dashboard__footer">
+            <a class="text-link" href="{{ route('home') }}">Xem cửa hàng</a>
+            <form method="POST" action="{{ route('logout') }}">@csrf<button class="button button--quiet" type="submit">Đăng xuất</button></form>
+        </div>
+    </div>
+@else
     <div class="shell">
         <header class="page-intro">
             <p class="eyebrow">Tài khoản / Dashboard</p>
@@ -31,4 +55,5 @@
             </aside>
         </div>
     </div>
+@endif
 @endsection

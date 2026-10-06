@@ -13,7 +13,13 @@
     </header>
 
     <section class="admin-dashboard__summary" aria-labelledby="summary-title">
-        <h2 id="summary-title">Số liệu hiện có</h2>
+        <div class="admin-dashboard__section-head">
+            <div><h2 id="summary-title">Tình hình hiện tại</h2><p>Các chỉ số được tổng hợp trực tiếp từ dữ liệu hệ thống.</p></div>
+            <nav class="action-group" aria-label="Tác vụ nhanh">
+                <a class="button" href="{{ route('admin.orders.index') }}">Xử lý đơn hàng</a>
+                <a class="button button--quiet" href="{{ route('inventory.index') }}">Kiểm tra tồn kho</a>
+            </nav>
+        </div>
         <dl class="admin-dashboard__kpis">
             <div class="admin-dashboard__kpi-lead">
                 <dt>Tổng tài khoản</dt>
@@ -73,7 +79,7 @@
     </section>
 
     <section class="admin-dashboard__categories" aria-labelledby="inventory-title">
-        <div class="admin-dashboard__section-head"><div><h2 id="inventory-title">Tồn kho</h2><p>Số liệu projection và đề nghị chờ duyệt tại thời điểm mở trang.</p></div><a class="text-link" href="{{ route('inventory.index') }}">Quản lý tồn kho</a></div>
+        <div class="admin-dashboard__section-head"><div><h2 id="inventory-title">Tồn kho</h2><p>Tình trạng hàng hóa và các đề nghị đang chờ xử lý.</p></div><a class="text-link" href="{{ route('inventory.index') }}">Quản lý tồn kho</a></div>
         <dl class="admin-dashboard__category-counts">
             <div><dt>Tổng sản phẩm</dt><dd>{{ number_format($stats['inventory']['products'], 0, ',', '.') }}</dd></div>
             <div><dt>Sắp hết</dt><dd>{{ number_format($stats['inventory']['low_stock'], 0, ',', '.') }}</dd></div>
@@ -82,27 +88,20 @@
         </dl>
     </section>
 
-    <div class="admin-dashboard__lower">
-        <section class="admin-dashboard__roadmap" aria-labelledby="roadmap-title">
-            <h2 id="roadmap-title">Trạng thái nghiệp vụ</h2>
-            <p>Các luồng đã sẵn sàng trong workspace và phần còn lại của lộ trình.</p>
-            <ul>
-                <li><span>Vòng đời đơn hàng</span><span>Đã triển khai</span></li>
-                <li><span>VNPay: khởi tạo, callback và hoàn tiền</span><span>Đã triển khai</span></li>
-                <li><span>Đánh giá sản phẩm</span><span>Chưa triển khai</span></li>
-            </ul>
-        </section>
-
-        <nav class="admin-dashboard__quick" aria-labelledby="quick-title">
-            <h2 id="quick-title">Đi nhanh</h2>
-            <p>Các trang đang hoạt động.</p>
-            <a class="button" href="{{ route('inventory.index') }}">Quản lý tồn kho</a>
-            <a class="button button--outline" href="{{ route('admin.refunds.index') }}">Quản lý hoàn tiền</a>
-            <a class="button button--outline" href="{{ route('inventory.adjustments.index') }}">Duyệt điều chỉnh</a>
-            <a class="text-link" href="{{ route('admin.categories.create') }}">Tạo danh mục</a>
-            <a class="button button--outline" href="{{ route('admin.categories.index') }}">Quản lý danh mục</a>
-            <a class="text-link" href="{{ route('home') }}">Về trang chủ</a>
-        </nav>
-    </div>
+    <nav class="admin-dashboard__workbench" aria-labelledby="workbench-title">
+        <div>
+            <p class="eyebrow">Lối tắt vận hành</p>
+            <h2 id="workbench-title">Tiếp tục công việc</h2>
+            <p>Mở thẳng khu vực cần xử lý mà không rời trung tâm vận hành.</p>
+        </div>
+        <div class="admin-dashboard__workbench-links">
+            <a href="{{ route('admin.orders.index') }}"><strong>Đơn hàng</strong><span>Tra cứu và cập nhật trạng thái</span></a>
+            <a href="{{ route('admin.support.index') }}"><strong>Hỗ trợ khách hàng</strong><span>Đọc và phản hồi hội thoại</span></a>
+            <a href="{{ route('inventory.adjustments.index') }}"><strong>Điều chỉnh kho</strong><span>Duyệt đề nghị đang chờ</span></a>
+            <a href="{{ route('admin.refunds.index') }}"><strong>Hoàn tiền VNPay</strong><span>Theo dõi và đối soát kết quả</span></a>
+            <a href="{{ route('admin.products.index') }}"><strong>Sản phẩm</strong><span>Cập nhật nội dung bán hàng</span></a>
+            <a href="{{ route('admin.categories.create') }}"><strong>Tạo danh mục</strong><span>Mở rộng cấu trúc cửa hàng</span></a>
+        </div>
+    </nav>
 </div>
 @endsection

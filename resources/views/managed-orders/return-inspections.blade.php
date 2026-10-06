@@ -9,7 +9,7 @@
     <header class="page-heading"><div><p class="eyebrow">Vận hành đơn hàng</p><h1>Kiểm tra hàng hoàn</h1><p>Tiếp nhận và phân loại từng sản phẩm trước khi hủy đơn và hoàn kho.</p></div><span class="status-badge">{{ $completedCount }}/{{ $order->items->count() }} đã hoàn tất</span></header>
 
     <div class="inspection-progress" role="status" aria-label="Tiến độ kiểm tra hàng hoàn">
-        <div><strong>{{ $completedCount }} / {{ $order->items->count() }}</strong><span>Order Item đã phân loại</span></div>
+        <div><strong>{{ $completedCount }} / {{ $order->items->count() }}</strong><span>Sản phẩm đã phân loại</span></div>
         <progress value="{{ $completedCount }}" max="{{ $order->items->count() }}">{{ $completedCount }}/{{ $order->items->count() }}</progress>
     </div>
 

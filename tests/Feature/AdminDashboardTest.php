@@ -157,12 +157,13 @@ class AdminDashboardTest extends TestCase
             ->assertSee('href="'.route('admin.products.index').'"', false)
             ->assertSee('href="'.route('admin.brands.index').'"', false)
             ->assertSee('href="'.route('home').'"', false)
-            ->assertSee('VNPay: khởi tạo, callback và hoàn tiền')
-            ->assertSee('Vòng đời đơn hàng')
-            ->assertSee('Đã triển khai')
-            ->assertSee('Đánh giá sản phẩm')
-            ->assertSee('Chưa triển khai')
-            ->assertDontSee('Thanh toán VNPay — Chưa triển khai')
+            ->assertSee('Tiếp tục công việc')
+            ->assertSee('Xử lý đơn hàng')
+            ->assertSee('Hỗ trợ khách hàng')
+            ->assertSee('Hoàn tiền VNPay')
+            ->assertDontSee('Đã triển khai')
+            ->assertDontSee('Chưa triển khai')
+            ->assertDontSee('Đánh giá sản phẩm')
             ->assertSee('href="'.route('admin.orders.index').'"', false)
             ->assertDontSee('href="/cart"', false)
             ->assertDontSee('Doanh thu')
@@ -196,6 +197,24 @@ class AdminDashboardTest extends TestCase
                 ->assertViewMissing('stats')
                 ->assertDontSee('Tổng quan quản trị');
         }
+    }
+
+    public function test_employee_dashboard_prioritizes_only_authorized_operational_tasks(): void
+    {
+        $employee = User::factory()->employee()->create(['name' => 'Nhân viên ca sáng']);
+
+        $this->actingAs($employee)
+            ->get(route('employee.dashboard'))
+            ->assertOk()
+            ->assertSee('Xin chào, Nhân viên ca sáng')
+            ->assertSee('href="'.route('employee.orders.index').'"', false)
+            ->assertSee('href="'.route('inventory.index').'"', false)
+            ->assertSee('href="'.route('employee.order-cancellation-requests.index').'"', false)
+            ->assertSee('href="'.route('employee.support.index').'"', false)
+            ->assertDontSee('Dashboard nền tảng')
+            ->assertDontSee('Chưa có dữ liệu nghiệp vụ')
+            ->assertDontSee('href="'.route('admin.refunds.index').'"', false)
+            ->assertDontSee('href="'.route('admin.products.index').'"', false);
     }
 
     public function test_dashboard_keeps_get_only_route_and_role_redirect(): void

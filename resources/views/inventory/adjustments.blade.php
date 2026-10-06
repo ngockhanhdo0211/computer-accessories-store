@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="shell inventory-page">
-    <header class="inventory-header"><div><p class="eyebrow">Tồn kho / Phê duyệt</p><h1>Đề nghị điều chỉnh</h1><p>{{ auth()->user()->isAdmin() ? 'Danh sách toàn hệ thống và hành động duyệt/từ chối.' : 'Các đề nghị do bạn tạo; pending chưa làm thay đổi tồn kho.' }}</p></div><a class="text-link" href="{{ route('inventory.index') }}">Về tồn kho</a></header>
+    <header class="inventory-header"><div><p class="eyebrow">Tồn kho / Điều chỉnh</p><h1>Đề nghị điều chỉnh</h1><p>{{ auth()->user()->isAdmin() ? 'Xem lý do và quyết định từng đề nghị đang chờ.' : 'Theo dõi các đề nghị bạn đã gửi; tồn kho chỉ thay đổi sau khi được duyệt.' }}</p></div><a class="text-link" href="{{ route('inventory.index') }}">Về tồn kho</a></header>
     @if($adjustments->isEmpty())
         <section class="catalog-empty"><h2>Chưa có đề nghị</h2><p>Đề nghị điều chỉnh sẽ xuất hiện tại đây.</p></section>
     @else

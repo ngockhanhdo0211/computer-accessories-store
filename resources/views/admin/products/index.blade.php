@@ -4,9 +4,9 @@
 <div class="shell admin-page">
     <header class="admin-heading">
         <div>
-            <p class="eyebrow">Quản trị / Catalog</p>
+            <p class="eyebrow">Hàng hóa</p>
             <h1>Quản lý sản phẩm</h1>
-            <p>{{ $products->total() }} sản phẩm khớp phạm vi hiện tại. Tồn kho chỉ hiển thị projection, chưa chỉnh sửa ở màn hình này.</p>
+            <p><strong>{{ $products->total() }}</strong> sản phẩm trong kết quả hiện tại. Cập nhật nội dung bán hàng tại đây; số lượng được quản lý trong khu vực Tồn kho.</p>
         </div>
         <a class="button" href="{{ route('admin.products.create') }}">Tạo sản phẩm</a>
     </header>

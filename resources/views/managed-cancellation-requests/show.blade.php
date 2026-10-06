@@ -11,19 +11,19 @@
 <div class="shell admin-page managed-order-page">
     <a class="text-link" href="{{ route($routePrefix.'.order-cancellation-requests.index') }}">← Danh sách yêu cầu</a>
     <header class="order-detail-header"><div><p class="eyebrow">Yêu cầu hủy đơn</p><h1>{{ $cancellationRequest->order->order_code }}</h1><p>{{ $cancellationRequest->customer->name }} · {{ $cancellationRequest->order->payment_method->label() }}</p></div><span class="status-badge {{ $requestBadge }}">{{ $cancellationRequest->status->label() }}</span></header>
-    <div class="order-detail-layout"><div class="order-detail-main"><section class="order-panel"><h2>Lý do Customer cung cấp</h2><p>{{ $cancellationRequest->reason }}</p></section><section class="order-panel"><h2>Order snapshot</h2><dl class="order-summary-list"><div><dt>Trạng thái Order</dt><dd>{{ $cancellationRequest->order->status->label() }}</dd></div><div><dt>Thanh toán</dt><dd>{{ $cancellationRequest->order->payment_status->label() }}</dd></div><div><dt>Tổng tiền</dt><dd>{{ number_format($cancellationRequest->order->total_vnd, 0, ',', '.') }} ₫</dd></div><div><dt>Sản phẩm</dt><dd>{{ $cancellationRequest->order->items->sum('quantity') }}</dd></div>@if($cancellationRequest->order->refund)<div><dt>Refund</dt><dd>{{ $cancellationRequest->order->refund->status->value }}</dd></div>@endif</dl></section></div>
+    <div class="order-detail-layout"><div class="order-detail-main"><section class="order-panel"><h2>Lý do khách hàng cung cấp</h2><p>{{ $cancellationRequest->reason }}</p></section><section class="order-panel"><h2>Thông tin đơn hàng</h2><dl class="order-summary-list"><div><dt>Trạng thái đơn</dt><dd>{{ $cancellationRequest->order->status->label() }}</dd></div><div><dt>Thanh toán</dt><dd>{{ $cancellationRequest->order->payment_status->label() }}</dd></div><div><dt>Tổng tiền</dt><dd>{{ number_format($cancellationRequest->order->total_vnd, 0, ',', '.') }} ₫</dd></div><div><dt>Sản phẩm</dt><dd>{{ $cancellationRequest->order->items->sum('quantity') }}</dd></div>@if($cancellationRequest->order->refund)<div><dt>Hoàn tiền</dt><dd>{{ $cancellationRequest->order->refund->status->value }}</dd></div>@endif</dl></section></div>
     <aside class="order-detail-sidebar">
         @if($cancellationRequest->status === \App\Enums\OrderCancellationRequestStatus::Pending)
             <section class="order-transition">
                 <h2>Quyết định</h2>
                 @if($isDrifted)
-                    <div class="alert alert--warning" role="status">Order đã rời trạng thái Đã đặt. Yêu cầu này không thể được chấp thuận; hãy ghi rõ lý do và đóng yêu cầu bằng quyết định từ chối.</div>
+                    <div class="alert alert--warning" role="status">Đơn hàng đã rời trạng thái Đã đặt. Yêu cầu này không thể được chấp thuận; hãy ghi rõ lý do và đóng yêu cầu bằng quyết định từ chối.</div>
                 @elseif(! $canApprove)
                     <div class="alert alert--warning" role="status">Thông tin thanh toán không còn khớp điều kiện chấp thuận. Chỉ có thể từ chối yêu cầu sau khi đối soát.</div>
                 @endif
                 @if($canApprove)
                     @if($cancellationRequest->order->payment_method === \App\Enums\PaymentMethod::VnPay)
-                        <div class="alert alert--warning">Chấp thuận sẽ hủy Order, hoàn kho và tạo Refund pending; không gọi VNPay ngay.</div>
+                        <div class="alert alert--warning">Chấp thuận sẽ hủy đơn, hoàn kho và tạo yêu cầu hoàn tiền đang chờ; VNPay chưa được gọi ở bước này.</div>
                     @endif
                     @php
                         $bag = $errors->approveCancellation;

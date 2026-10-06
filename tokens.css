@@ -66,3 +66,15 @@
   --shadow-card: 0 16px 34px -30px oklch(20% 0.018 255 / 0.32);
   --container: 82rem;
 }
+
+.workspace-body {
+  --color-canvas: oklch(96% 0.008 255);
+  --color-surface: oklch(99% 0.003 255);
+  --color-workspace-rail: oklch(18% 0.022 255);
+  --color-line-strong: oklch(68% 0.018 255);
+  --color-primary: var(--color-accent);
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --shadow-card: 0 18px 42px -34px oklch(20% 0.018 255 / 0.38);
+  --container: 88rem;
+}

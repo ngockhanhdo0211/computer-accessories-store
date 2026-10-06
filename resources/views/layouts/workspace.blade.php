@@ -25,8 +25,8 @@
             </main>
 
             <footer class="workspace-footer">
-                <span>Trạm Phụ Kiện</span>
-                <span>{{ auth()->user()->role->label() }} · Không gian vận hành</span>
+                <span>Trạm Phụ Kiện · Trung tâm vận hành</span>
+                <span>Phiên làm việc: {{ auth()->user()->role->label() }}</span>
             </footer>
         </div>
 

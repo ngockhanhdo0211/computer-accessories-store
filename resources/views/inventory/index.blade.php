@@ -5,7 +5,7 @@
 @section('content')
 <div class="shell inventory-page">
     <header class="inventory-header">
-        <div><p class="eyebrow">Vận hành / Một kho</p><h1>Quản lý tồn kho</h1><p>Projection hiện tại và đường dẫn tới sổ giao dịch bất biến của từng sản phẩm.</p></div>
+        <div><p class="eyebrow">Hàng hóa / Tồn kho</p><h1>Quản lý tồn kho</h1><p>Theo dõi lượng hàng bán được, hàng hỏng và lịch sử biến động của từng sản phẩm.</p></div>
         <a class="button button--outline" href="{{ route('inventory.adjustments.index') }}">Đề nghị điều chỉnh</a>
     </header>
 
@@ -17,7 +17,7 @@
     </form>
 
     @if($products->isEmpty())
-        <section class="catalog-empty"><h2>{{ request()->hasAny(['search','stock']) ? 'Không có kết quả phù hợp' : 'Chưa có sản phẩm' }}</h2><p>Điều chỉnh bộ lọc hoặc tạo Product trước khi vận hành kho.</p></section>
+        <section class="catalog-empty"><h2>{{ request()->hasAny(['search','stock']) ? 'Không có kết quả phù hợp' : 'Chưa có sản phẩm' }}</h2><p>{{ request()->hasAny(['search','stock']) ? 'Thử thay đổi từ khóa hoặc tình trạng kho.' : 'Sản phẩm sẽ xuất hiện tại đây sau khi được tạo.' }}</p></section>
     @else
         <div class="inventory-table-wrap"><table class="inventory-table"><thead><tr><th>Sản phẩm</th><th>Tồn bán được</th><th>Hàng hỏng</th><th>Đã giao</th><th>Tình trạng</th><th>Thao tác</th></tr></thead><tbody>
         @foreach($products as $product)

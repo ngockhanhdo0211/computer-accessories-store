@@ -80,4 +80,6 @@
             @endif
         @endif
     </nav>
+
+    <span class="workspace-topbar__role">{{ auth()->user()->role->label() }}</span>
 </header>

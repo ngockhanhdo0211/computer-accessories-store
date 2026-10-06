@@ -211,6 +211,77 @@ class WorkspaceNavigationTest extends TestCase
         $this->assertStringContainsString("addEventListener('pagehide'", $javascript);
     }
 
+    public function test_workspace_refresh_is_scoped_data_first_and_hides_internal_evidence(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+        $tokens = file_get_contents(base_path('tokens.css'));
+        $sidebar = file_get_contents(resource_path('views/partials/workspace-sidebar.blade.php'));
+        $inventoryHistory = file_get_contents(resource_path('views/inventory/history.blade.php'));
+        $refundShow = file_get_contents(resource_path('views/admin/refunds/show.blade.php'));
+
+        $this->assertIsString($css);
+        $this->assertIsString($tokens);
+        $this->assertStringContainsString('.workspace-body .workspace-sidebar { width: 15.5rem;', $css);
+        $this->assertStringContainsString('.workspace-body .workspace-nav a { min-height: 2.75rem;', $css);
+        $this->assertStringContainsString('.workspace-body .workspace-logout { min-height: 2.75rem;', $css);
+        $this->assertStringContainsString('.workspace-body .employee-dashboard__tasks {', $css);
+        $this->assertStringContainsString('.workspace-body .admin-dashboard__workbench {', $css);
+        $this->assertStringNotContainsString("\n.employee-dashboard__tasks {", $css);
+        $this->assertStringNotContainsString('.admin-dashboard__roadmap', $css);
+        $this->assertStringNotContainsString('.admin-dashboard__quick', $css);
+        $this->assertStringNotContainsString('.admin-dashboard__lower', $css);
+        $this->assertStringNotContainsString('.refund-evidence-value', $css);
+        $this->assertStringContainsString(".workspace-body {\n  --color-canvas:", str_replace("\r\n", "\n", $tokens));
+        $this->assertStringContainsString('Bán hàng', $sidebar);
+        $this->assertStringContainsString('Hàng hóa', $sidebar);
+        $this->assertStringContainsString('Thiết lập bán hàng', $sidebar);
+        $this->assertStringNotContainsString('{{ $transaction->source_key }}', $inventoryHistory);
+        $this->assertStringNotContainsString('{{ $refund->id }}', $refundShow);
+        $this->assertStringNotContainsString('{{ $gateway->request_id }}', $refundShow);
+        $this->assertStringNotContainsString('{{ $gateway->request_fingerprint }}', $refundShow);
+        $this->assertStringNotContainsString('{{ $gateway->response_fingerprint', $refundShow);
+    }
+
+    public function test_workspace_dashboards_are_query_free_and_do_not_advertise_roadmap(): void
+    {
+        foreach ([
+            resource_path('views/admin/dashboard.blade.php'),
+            resource_path('views/dashboard.blade.php'),
+        ] as $path) {
+            $view = file_get_contents($path);
+
+            $this->assertIsString($view);
+            $this->assertStringNotContainsString('::query', $view);
+            $this->assertStringNotContainsString('DB::', $view);
+            $this->assertDoesNotMatchRegularExpression('/[A-Za-z\\\\]+::count\s*\(/', $view);
+        }
+
+        $adminDashboard = file_get_contents(resource_path('views/admin/dashboard.blade.php'));
+
+        $this->assertStringNotContainsString('roadmap', strtolower($adminDashboard));
+        $this->assertStringNotContainsString('foundation', strtolower($adminDashboard));
+        $this->assertStringNotContainsString('phase', strtolower($adminDashboard));
+    }
+
+    public function test_changed_operational_views_keep_form_and_mobile_table_contracts(): void
+    {
+        $refundShow = file_get_contents(resource_path('views/admin/refunds/show.blade.php'));
+        $cancellationIndex = file_get_contents(resource_path('views/managed-cancellation-requests/index.blade.php'));
+
+        $this->assertIsString($refundShow);
+        $this->assertSame(3, substr_count($refundShow, 'name="event_key"'));
+        $this->assertSame(3, substr_count($refundShow, 'data-submit-once'));
+        $this->assertSame(3, substr_count($refundShow, '@csrf'));
+        $this->assertSame(2, substr_count($refundShow, "@method('PATCH')"));
+        $this->assertStringContainsString("'submitRefund'", $refundShow);
+        $this->assertStringContainsString("'reconcileRefund'", $refundShow);
+        $this->assertStringContainsString("'markRefundAmbiguous'", $refundShow);
+
+        $this->assertIsString($cancellationIndex);
+        $this->assertSame(7, substr_count($cancellationIndex, '<th>'));
+        $this->assertSame(7, substr_count($cancellationIndex, '<td data-label='));
+    }
+
     public function test_workspace_partial_has_no_database_queries_and_route_middleware_is_unchanged(): void
     {
         $sidebar = file_get_contents(resource_path('views/partials/workspace-sidebar.blade.php'));

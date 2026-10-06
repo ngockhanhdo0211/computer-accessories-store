@@ -33,6 +33,15 @@ Website bán phụ kiện máy tính với cảm giác cửa hàng công nghệ 
 - **Coupon Definition:** ledger quản trị mã và editor target theo scope trong workspace; không hiển thị lượt dùng giả hoặc mô phỏng luồng Apply Coupon/Checkout.
 - **Admin/Employee Workspace:** sidebar trái theo role, topbar gọn và main workbench rộng; desktop cố định, mobile dùng drawer có overlay, Escape, focus trap và scroll lock. Storefront tiếp tục dùng header ngang.
 
+### Admin/Employee Workspace
+
+- Dùng macrostructure **Workbench**: rail graphite 15,5rem, topbar ngữ cảnh 4,25rem và canvas sáng rộng tối đa 88rem. Laptop 1366–1440px phải thấy heading, bộ lọc và phần đầu dữ liệu mà không cần đi qua hero lớn.
+- Nhóm điều hướng theo công việc thật: tổng quan, bán hàng, hàng hóa, thiết lập bán hàng và cửa hàng. Active state dùng ultramarine; các liên kết không được phép theo role không xuất hiện.
+- Heading trang cao vừa phải, mô tả một câu tập trung vào nhiệm vụ. Không dùng nội dung “đã triển khai”, “chưa triển khai”, tên phase/foundation hoặc giải thích cơ chế nội bộ.
+- Bảng và ledger là bề mặt dữ liệu chính: header tương phản nhẹ, hàng có nhịp 48–56px, tên/mã/trạng thái và thao tác có thứ bậc rõ. Chỉ chuyển sang card khi màn hình không còn đủ chỗ; không giấu thao tác chính.
+- Form dùng một bề mặt sáng, chia section bằng đường kẻ thay vì card lồng nhau. Nhãn, helper/error text và focus ring dùng foundation chung; nhóm nút luôn giữ hành động chính dễ thấy.
+- Không hiển thị internal ID, request/event key, fingerprint hoặc raw JSON. Chỉ trình bày mã nghiệp vụ cần cho vận hành như mã đơn, SKU và mã giao dịch cổng thanh toán.
+
 ## Thành phần dùng chung
 
 Storefront header, workspace sidebar/topbar, wordmark, footer, button, form, focus ring và thông báo dùng chung token. Control tương tác có chiều cao tối thiểu 44px, focus nhìn thấy rõ, giá dùng số tabular. Mọi trang hỗ trợ 320px trở lên và không tràn ngang; lỗi/helper text nằm cạnh trường; nội dung động luôn được Blade escape.

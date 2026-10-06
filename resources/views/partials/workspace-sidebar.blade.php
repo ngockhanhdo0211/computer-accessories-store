@@ -4,7 +4,7 @@
             <span class="brand-mark" aria-hidden="true">TP</span>
             <span>
                 <strong>Trạm Phụ Kiện</strong>
-                <small>Workspace</small>
+                <small>Trung tâm vận hành</small>
             </span>
         </a>
         <button class="workspace-sidebar__close" type="button" aria-label="Đóng menu điều hướng" data-workspace-close>
@@ -20,25 +20,8 @@
             </a>
         </div>
 
-        @if (auth()->user()->isAdmin())
-            <div class="workspace-nav__group">
-                <p class="workspace-nav__label">Catalog</p>
-                <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
-                <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
-                <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
-            </div>
-        @endif
-
-        @if (auth()->user()->isAdmin())
-            <div class="workspace-nav__group">
-                <p class="workspace-nav__label">Khuyến mãi</p>
-                <a href="{{ route('admin.coupons.index') }}" @if(request()->routeIs('admin.coupons.*')) aria-current="page" @endif>Mã giảm giá</a>
-            </div>
-        @endif
-
         <div class="workspace-nav__group">
-            <p class="workspace-nav__label">Vận hành</p>
-            <a href="{{ route(auth()->user()->isAdmin() ? 'admin.support.index' : 'employee.support.index') }}" @if(request()->routeIs('admin.support.*', 'employee.support.*')) aria-current="page" @endif>Hỗ trợ khách hàng</a>
+            <p class="workspace-nav__label">Bán hàng</p>
             @if (auth()->user()->isAdmin())
                 <a href="{{ route('admin.orders.index') }}" @if(request()->routeIs('admin.orders.*')) aria-current="page" @endif>Đơn hàng</a>
                 <a href="{{ route('admin.order-cancellation-requests.index') }}" @if(request()->routeIs('admin.order-cancellation-requests.*')) aria-current="page" @endif>Yêu cầu hủy đơn</a>
@@ -47,14 +30,29 @@
                 <a href="{{ route('employee.orders.index') }}" @if(request()->routeIs('employee.orders.*')) aria-current="page" @endif>Đơn hàng</a>
                 <a href="{{ route('employee.order-cancellation-requests.index') }}" @if(request()->routeIs('employee.order-cancellation-requests.*')) aria-current="page" @endif>Yêu cầu hủy đơn</a>
             @endif
-            <a href="{{ route('inventory.index') }}" @if(request()->routeIs('inventory.*')) aria-current="page" @endif>Tồn kho</a>
-            @if (auth()->user()->isAdmin())
-                <a href="{{ route('admin.shipping-rates.index') }}" @if(request()->routeIs('admin.shipping-rates.*')) aria-current="page" @endif>Phí vận chuyển</a>
-            @endif
+            <a href="{{ route(auth()->user()->isAdmin() ? 'admin.support.index' : 'employee.support.index') }}" @if(request()->routeIs('admin.support.*', 'employee.support.*')) aria-current="page" @endif>Hỗ trợ khách hàng</a>
         </div>
 
         <div class="workspace-nav__group">
-            <p class="workspace-nav__label">Liên kết</p>
+            <p class="workspace-nav__label">Hàng hóa</p>
+            @if (auth()->user()->isAdmin())
+                <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
+                <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
+                <a href="{{ route('admin.brands.index') }}" @if(request()->routeIs('admin.brands.*')) aria-current="page" @endif>Thương hiệu</a>
+            @endif
+            <a href="{{ route('inventory.index') }}" @if(request()->routeIs('inventory.*')) aria-current="page" @endif>Tồn kho</a>
+        </div>
+
+        @if (auth()->user()->isAdmin())
+            <div class="workspace-nav__group">
+                <p class="workspace-nav__label">Thiết lập bán hàng</p>
+                <a href="{{ route('admin.coupons.index') }}" @if(request()->routeIs('admin.coupons.*')) aria-current="page" @endif>Mã giảm giá</a>
+                <a href="{{ route('admin.shipping-rates.index') }}" @if(request()->routeIs('admin.shipping-rates.*')) aria-current="page" @endif>Phí vận chuyển</a>
+            </div>
+        @endif
+
+        <div class="workspace-nav__group">
+            <p class="workspace-nav__label">Cửa hàng</p>
             <a href="{{ route('home') }}">Xem cửa hàng</a>
         </div>
     </nav>

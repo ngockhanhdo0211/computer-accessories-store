@@ -7,7 +7,7 @@
     $hasActiveFilters = collect(['search','status','payment_status','payment_method','date_from','date_to'])->contains(fn ($key) => filled($filters[$key] ?? null)) || $filters['sort'] !== 'newest';
 @endphp
 <div class="shell managed-order-page">
-    <header class="page-heading managed-order-heading"><div><p class="eyebrow">Vận hành</p><h1>Đơn hàng</h1><p>Tra cứu đơn hàng và mở chi tiết để cập nhật hai bước tiến vận chuyển đang được hỗ trợ.</p></div><p class="order-count"><strong>{{ $orders->total() }}</strong> đơn hàng</p></header>
+    <header class="page-heading managed-order-heading"><div><p class="eyebrow">Bán hàng</p><h1>Đơn hàng</h1><p>Tra cứu theo khách hàng, thanh toán hoặc trạng thái để tiếp tục xử lý đơn.</p></div><p class="order-count"><strong>{{ $orders->total() }}</strong> đơn hàng</p></header>
 
     @if ($errors->any())
         <div class="alert alert--error order-filter-error" role="alert">Không thể áp dụng bộ lọc. Hãy kiểm tra các trường được đánh dấu bên dưới.</div>
