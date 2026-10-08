@@ -3,13 +3,15 @@
 namespace Tests\Unit;
 
 use App\Enums\RefundGatewayAttemptStatus;
-use App\Exceptions\VnPayGatewayException;
+use App\Exceptions\VnPayRefundConfigurationException;
 use App\Models\PaymentAttempt;
 use App\Models\Refund;
 use App\Services\VnPayRefundGateway;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use LogicException;
 use Tests\TestCase;
 
 class VnPayRefundGatewayTest extends TestCase
@@ -45,10 +47,16 @@ class VnPayRefundGatewayTest extends TestCase
 
         $this->assertSame('02', $request->parameters['vnp_TransactionType']);
         $this->assertSame('10000000', $request->parameters['vnp_Amount']);
-        $this->assertSame('20261003120000', $request->parameters['vnp_TransactionDate']);
+        $this->assertSame('20261003123000', $request->parameters['vnp_TransactionDate']);
         $this->assertSame('20261003130000', $request->parameters['vnp_CreateDate']);
-        $this->assertSame('5074929c4d69612411b7121e684a6e0339685a6e3aa69740dc7275017ed09417071e7bd186b24f3d37e494a3d42c4f08634bbdfaae1d3bc0a2978a0570173adc', $request->parameters['vnp_SecureHash']);
-        $this->assertSame('f81809d514cc7c3cadf9d1b157b6b0e1d203ba0381a7847a142ca17bc8a5f0fc', $request->requestFingerprint);
+        $this->assertSame('40b12a262a4e017859dec378699d9853ae8ba9b7fea33118dd3b0281c93c4ccc7c430fb998853d3986fe4a6911341964f9c93ce073f93d8c3fdac775201dbb26', $request->parameters['vnp_SecureHash']);
+        $this->assertSame('0bf64d3d999a27539f7b6d254646ac725aadbfc1025bd77cbc3b220f37745871', $request->requestFingerprint);
+        $this->assertSame([
+            'vnp_RequestId', 'vnp_Version', 'vnp_Command', 'vnp_TmnCode',
+            'vnp_TransactionType', 'vnp_TxnRef', 'vnp_Amount', 'vnp_TransactionNo',
+            'vnp_TransactionDate', 'vnp_CreateBy', 'vnp_CreateDate', 'vnp_IpAddr',
+            'vnp_OrderInfo', 'vnp_SecureHash',
+        ], array_keys($request->parameters));
         $this->assertStringNotContainsString('fixed-test-secret', json_encode($request->parameters, JSON_THROW_ON_ERROR));
     }
 
@@ -65,7 +73,10 @@ class VnPayRefundGatewayTest extends TestCase
             ['94', '05', RefundGatewayAttemptStatus::Ambiguous],
             ['98', '05', RefundGatewayAttemptStatus::Ambiguous],
             ['99', '05', RefundGatewayAttemptStatus::Ambiguous],
+            ['03', '09', RefundGatewayAttemptStatus::Failed],
+            ['91', '09', RefundGatewayAttemptStatus::Failed],
             ['95', '09', RefundGatewayAttemptStatus::Failed],
+            ['97', '09', RefundGatewayAttemptStatus::Failed],
             ['00', '09', RefundGatewayAttemptStatus::Failed],
             ['99', '09', RefundGatewayAttemptStatus::Ambiguous],
             ['77', '09', RefundGatewayAttemptStatus::Ambiguous],
@@ -85,8 +96,14 @@ class VnPayRefundGatewayTest extends TestCase
         $gateway = app(VnPayRefundGateway::class);
         $request = $gateway->buildRequest($refund, $payment, 'RF550E8400E29B41D4A7164466554400', now());
 
-        Http::fake(fn () => throw new ConnectionException('timeout'));
-        $this->assertSame(RefundGatewayAttemptStatus::Ambiguous, $gateway->send($request)->status);
+        Log::spy();
+        foreach (['timeout', 'dns', 'tls'] as $failure) {
+            Http::fake(fn () => throw new ConnectionException($failure));
+            $this->assertSame(RefundGatewayAttemptStatus::Ambiguous, $gateway->send($request)->status);
+        }
+        Log::assertLogged('warning', fn (string $message, array $context): bool => $message === 'VNPay refund operation requires reconciliation.'
+            && $context['reason'] === 'transport_unavailable'
+            && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), 'fixed-test-secret'));
 
         $invalid = $this->signedResponse($request->parameters, '00', '00');
         $invalid['vnp_SecureHash'] = str_repeat('0', 128);
@@ -94,6 +111,11 @@ class VnPayRefundGatewayTest extends TestCase
         $this->assertSame(RefundGatewayAttemptStatus::Ambiguous, $gateway->send($request)->status);
 
         Http::fake(fn () => Http::response('not-json', 200));
+        $this->assertSame(RefundGatewayAttemptStatus::Ambiguous, $gateway->send($request)->status);
+
+        $unsigned = $this->signedResponse($request->parameters, '00', '00');
+        unset($unsigned['vnp_SecureHash']);
+        Http::fake(fn () => Http::response($unsigned, 200));
         $this->assertSame(RefundGatewayAttemptStatus::Ambiguous, $gateway->send($request)->status);
 
         $mismatchedRequest = $this->signedResponse($request->parameters, '00', '00');
@@ -105,6 +127,18 @@ class VnPayRefundGatewayTest extends TestCase
         );
         Http::fake(fn () => Http::response($mismatchedRequest, 200));
         $this->assertSame(RefundGatewayAttemptStatus::Ambiguous, $gateway->send($request)->status);
+    }
+
+    public function test_programming_error_is_not_hidden_as_an_ambiguous_gateway_result(): void
+    {
+        [$refund, $payment] = $this->evidence();
+        $gateway = app(VnPayRefundGateway::class);
+        $request = $gateway->buildRequest($refund, $payment, 'RF550E8400E29B41D4A7164466554400', now());
+
+        Http::fake(fn () => throw new LogicException('programming defect'));
+
+        $this->expectException(LogicException::class);
+        $gateway->send($request);
     }
 
     public function test_refund_configuration_fails_closed_for_url_identity_ip_and_timeouts(): void
@@ -121,7 +155,7 @@ class VnPayRefundGatewayTest extends TestCase
             try {
                 $gateway->validatedConfiguration();
                 $this->fail("Invalid {$key} was accepted.");
-            } catch (VnPayGatewayException) {
+            } catch (VnPayRefundConfigurationException) {
                 $this->assertTrue(true);
             } finally {
                 config()->set('services.vnpay.'.$key, $original);
@@ -138,6 +172,7 @@ class VnPayRefundGatewayTest extends TestCase
             'gateway_transaction_id' => '123456789',
             'amount_vnd' => 100_000,
             'created_at' => CarbonImmutable::parse('2026-10-03 05:00:00', 'UTC'),
+            'gateway_paid_at' => CarbonImmutable::parse('2026-10-03 05:30:00', 'UTC'),
         ]);
         $refund = new Refund;
         $refund->forceFill(['id' => 20, 'payment_attempt_id' => 10, 'amount_vnd' => 100_000]);

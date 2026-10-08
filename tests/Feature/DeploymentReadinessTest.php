@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\VnPayRefundGateway;
 use Illuminate\Http\Middleware\TrustHosts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -246,6 +247,27 @@ class DeploymentReadinessTest extends TestCase
         }
     }
 
+    public function test_vnpay_validation_requires_safe_refund_configuration_when_enabled(): void
+    {
+        foreach ([
+            'VNPAY_REFUND_URL' => ['services.vnpay.refund_url', 'https://example.test/refund'],
+            'VNPAY_REFUND_CREATE_BY' => ['services.vnpay.refund_create_by', ''],
+            'VNPAY_REFUND_IP_ADDRESS' => ['services.vnpay.refund_ip_address', 'not-an-ip'],
+            'VNPAY_REFUND_CONNECT_TIMEOUT' => ['services.vnpay.refund_connect_timeout', 0],
+            'VNPAY_REFUND_TIMEOUT' => ['services.vnpay.refund_timeout', 0],
+            'VNPAY_REFUND_SUBMISSION_STALE_SECONDS' => ['services.vnpay.refund_submission_stale_seconds', 15],
+        ] as $name => [$configKey, $invalidValue]) {
+            $this->setValidProductionConfiguration();
+            config()->set($configKey, $invalidValue);
+
+            $this->assertSame(1, Artisan::call('app:validate-production'), $name);
+            $this->assertStringContainsString($name, Artisan::output());
+            if ((string) $invalidValue !== '') {
+                $this->assertStringNotContainsString((string) $invalidValue, Artisan::output());
+            }
+        }
+    }
+
     public function test_forwarded_https_generates_secure_urls_without_trusting_forwarded_host(): void
     {
         config()->set('app.url', 'https://shop.example.test');
@@ -419,9 +441,15 @@ class DeploymentReadinessTest extends TestCase
             'product-images.cloudinary.api_secret' => 'deployment-test-secret',
             'product-images.cloudinary.folder' => 'computer-accessories-store/production',
             'filesystems.default' => 'public',
-            'services.vnpay.terminal_code' => null,
-            'services.vnpay.hash_secret' => null,
-            'services.vnpay.return_url' => null,
+            'services.vnpay.terminal_code' => 'ABCDEFGH',
+            'services.vnpay.hash_secret' => 'deployment-vnpay-secret',
+            'services.vnpay.return_url' => 'https://shop.example.test/checkout/vnpay/return',
+            'services.vnpay.refund_url' => VnPayRefundGateway::SANDBOX_REFUND_URL,
+            'services.vnpay.refund_create_by' => 'refund-system',
+            'services.vnpay.refund_ip_address' => '203.0.113.10',
+            'services.vnpay.refund_connect_timeout' => 5,
+            'services.vnpay.refund_timeout' => 15,
+            'services.vnpay.refund_submission_stale_seconds' => 60,
         ]);
     }
 

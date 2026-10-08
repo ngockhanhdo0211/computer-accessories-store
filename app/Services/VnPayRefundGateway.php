@@ -5,15 +5,17 @@ namespace App\Services;
 use App\Contracts\VnPayRefundTransport;
 use App\Enums\RefundGatewayAttemptStatus;
 use App\Exceptions\VnPayGatewayException;
+use App\Exceptions\VnPayRefundConfigurationException;
 use App\Models\PaymentAttempt;
 use App\Models\Refund;
 use App\ValueObjects\VnPayRefundRequest;
 use App\ValueObjects\VnPayRefundResult;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
-use Throwable;
+use Illuminate\Support\Facades\Log;
 
 class VnPayRefundGateway implements VnPayRefundTransport
 {
@@ -54,7 +56,7 @@ class VnPayRefundGateway implements VnPayRefundTransport
             || preg_match('/^[A-Za-z0-9]{1,100}$/D', $paymentAttempt->gateway_reference) !== 1
             || ! is_string($paymentAttempt->gateway_transaction_id)
             || preg_match('/^[0-9]{1,15}$/D', $paymentAttempt->gateway_transaction_id) !== 1
-            || $paymentAttempt->created_at === null) {
+            || $paymentAttempt->gateway_paid_at === null) {
             throw new VnPayGatewayException('Payment Attempt has incomplete verified evidence for Refund.');
         }
 
@@ -68,7 +70,7 @@ class VnPayRefundGateway implements VnPayRefundTransport
             'vnp_TxnRef' => $paymentAttempt->gateway_reference,
             'vnp_Amount' => (string) ($refund->amount_vnd * 100),
             'vnp_TransactionNo' => $paymentAttempt->gateway_transaction_id,
-            'vnp_TransactionDate' => $paymentAttempt->created_at->clone()->timezone($timezone)->format('YmdHis'),
+            'vnp_TransactionDate' => $paymentAttempt->gateway_paid_at->clone()->timezone($timezone)->format('YmdHis'),
             'vnp_CreateBy' => $configuration['refund_create_by'],
             'vnp_CreateDate' => $submittedAt->clone()->timezone($timezone)->format('YmdHis'),
             'vnp_IpAddr' => $configuration['refund_ip_address'],
@@ -90,7 +92,11 @@ class VnPayRefundGateway implements VnPayRefundTransport
                 ->timeout($configuration['refund_timeout'])
                 ->withoutRedirecting()
                 ->post($configuration['refund_url'], $request->parameters);
-        } catch (Throwable) {
+        } catch (ConnectionException $exception) {
+            $this->logOperationalFailure('transport_unavailable', $request, [
+                'exception_class' => $exception::class,
+            ]);
+
             return VnPayRefundResult::ambiguous();
         }
 
@@ -112,31 +118,42 @@ class VnPayRefundGateway implements VnPayRefundTransport
         ];
         foreach (['refund_url', 'terminal_code', 'hash_secret', 'version', 'timezone', 'refund_create_by', 'refund_ip_address'] as $key) {
             if (! is_string($configuration[$key]) || trim($configuration[$key]) === '') {
-                throw new VnPayGatewayException("Missing VNPay Refund configuration: {$key}.");
+                throw new VnPayRefundConfigurationException("Missing VNPay Refund configuration: {$key}.");
             }
             $configuration[$key] = trim($configuration[$key]);
         }
         if ($configuration['refund_url'] !== self::SANDBOX_REFUND_URL
             || $configuration['version'] !== '2.1.0'
             || $configuration['timezone'] !== 'Asia/Ho_Chi_Minh') {
-            throw new VnPayGatewayException('Only the allowlisted VNPay Sandbox Refund protocol is supported.');
+            throw new VnPayRefundConfigurationException('Only the allowlisted VNPay Sandbox Refund protocol is supported.');
         }
         if (preg_match('/^[A-Za-z0-9]{8}$/D', $configuration['terminal_code']) !== 1
             || preg_match('/^[A-Za-z0-9._-]{1,64}$/D', $configuration['refund_create_by']) !== 1
             || filter_var($configuration['refund_ip_address'], FILTER_VALIDATE_IP) === false
             || strlen($configuration['refund_ip_address']) > 45) {
-            throw new VnPayGatewayException('VNPay Refund identity or server IP configuration is invalid.');
+            throw new VnPayRefundConfigurationException('VNPay Refund identity or server IP configuration is invalid.');
         }
         foreach (['refund_connect_timeout', 'refund_timeout'] as $key) {
             if (! is_int($configuration[$key]) || $configuration[$key] < 1 || $configuration[$key] > 30) {
-                throw new VnPayGatewayException("VNPay {$key} must be an integer from 1 to 30 seconds.");
+                throw new VnPayRefundConfigurationException("VNPay {$key} must be an integer from 1 to 30 seconds.");
             }
         }
         if ($configuration['refund_connect_timeout'] > $configuration['refund_timeout']) {
-            throw new VnPayGatewayException('VNPay Refund connect timeout cannot exceed total timeout.');
+            throw new VnPayRefundConfigurationException('VNPay Refund connect timeout cannot exceed total timeout.');
         }
 
         return $configuration;
+    }
+
+    public function configurationIsValid(): bool
+    {
+        try {
+            $this->validatedConfiguration();
+
+            return true;
+        } catch (VnPayRefundConfigurationException) {
+            return false;
+        }
     }
 
     private function parseResponse(Response $response, VnPayRefundRequest $request, array $configuration): VnPayRefundResult
@@ -144,15 +161,17 @@ class VnPayRefundGateway implements VnPayRefundTransport
         $body = $response->body();
         $fingerprint = hash('sha256', $body);
         if (! $response->successful() || strlen($body) > 32_768) {
+            $this->logOperationalFailure('http_or_size_invalid', $request, [
+                'http_status' => $response->status(),
+            ]);
+
             return VnPayRefundResult::ambiguous($fingerprint);
         }
 
-        try {
-            $payload = $response->json();
-        } catch (Throwable) {
-            return VnPayRefundResult::ambiguous($fingerprint);
-        }
+        $payload = $response->json();
         if (! is_array($payload)) {
+            $this->logOperationalFailure('response_not_json_object', $request);
+
             return VnPayRefundResult::ambiguous($fingerprint);
         }
 
@@ -160,6 +179,8 @@ class VnPayRefundGateway implements VnPayRefundTransport
         foreach ([...self::RESPONSE_SIGNATURE_FIELDS, 'vnp_SecureHash'] as $field) {
             $value = $payload[$field] ?? null;
             if (! is_string($value) || strlen($value) > 255 || preg_match('/[\x00-\x1F\x7F]/', $value) === 1) {
+                $this->logOperationalFailure('response_field_invalid', $request, ['field' => $field]);
+
                 return VnPayRefundResult::ambiguous($fingerprint);
             }
             $normalized[$field] = $value;
@@ -167,6 +188,8 @@ class VnPayRefundGateway implements VnPayRefundTransport
         $expected = hash_hmac('sha512', $this->signatureData($normalized, self::RESPONSE_SIGNATURE_FIELDS), $configuration['hash_secret']);
         if (preg_match('/^[0-9a-fA-F]{128}$/D', $normalized['vnp_SecureHash']) !== 1
             || ! hash_equals($expected, strtolower($normalized['vnp_SecureHash']))) {
+            $this->logOperationalFailure('response_signature_invalid', $request);
+
             return VnPayRefundResult::ambiguous($fingerprint);
         }
 
@@ -180,6 +203,8 @@ class VnPayRefundGateway implements VnPayRefundTransport
             || preg_match('/^[0-9]{2}$/D', $normalized['vnp_ResponseCode']) !== 1
             || preg_match('/^[0-9]{2}$/D', $normalized['vnp_TransactionStatus']) !== 1
             || preg_match('/^[0-9]{1,15}$/D', $normalized['vnp_TransactionNo']) !== 1) {
+            $this->logOperationalFailure('response_identity_invalid', $request);
+
             return VnPayRefundResult::ambiguous($fingerprint);
         }
 
@@ -205,5 +230,21 @@ class VnPayRefundGateway implements VnPayRefundTransport
     private function signatureData(array $parameters, array $fields): string
     {
         return implode('|', array_map(static fn (string $field): string => $parameters[$field] ?? '', $fields));
+    }
+
+    /** @param array<string, int|string> $context */
+    private function logOperationalFailure(string $reason, VnPayRefundRequest $request, array $context = []): void
+    {
+        Log::warning('VNPay refund operation requires reconciliation.', [
+            'operation' => 'vnpay_refund',
+            'reason' => $reason,
+            'request_id' => $this->maskedRequestId($request->requestId()),
+            ...$context,
+        ]);
+    }
+
+    private function maskedRequestId(string $requestId): string
+    {
+        return substr($requestId, 0, 4).'************************'.substr($requestId, -4);
     }
 }

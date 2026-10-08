@@ -78,7 +78,7 @@
         </main>
 
         <aside class="order-detail-sidebar">
-            @if(!$gateway && $refund->status === App\Enums\RefundStatus::Pending)
+            @if(!$gateway && $refund->status === App\Enums\RefundStatus::Pending && $refundGatewayConfigured)
                 <section class="order-transition">
                     <p class="section-label">Gửi tới VNPay</p>
                     <h2>Gửi yêu cầu hoàn tiền</h2>
@@ -91,6 +91,12 @@
                         @endforeach
                         <button class="button" type="submit">Gửi yêu cầu hoàn tiền</button>
                     </form>
+                </section>
+            @elseif(!$gateway && $refund->status === App\Enums\RefundStatus::Pending)
+                <section class="order-transition">
+                    <p class="section-label">VNPay tạm thời chưa sẵn sàng</p>
+                    <h2>Yêu cầu chưa được gửi</h2>
+                    <div class="alert alert--warning" role="status">Cấu hình hoàn tiền chưa hợp lệ. Không có yêu cầu nào được gửi tới VNPay; hãy liên hệ người vận hành hệ thống.</div>
                 </section>
             @endif
 

@@ -14,12 +14,10 @@ use App\Models\RefundGatewayAttempt;
 use App\Models\User;
 use App\Services\VnPayRefundGateway;
 use App\ValueObjects\VnPayRefundRequest;
-use App\ValueObjects\VnPayRefundResult;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 class SubmitVnPayRefund
 {
@@ -102,11 +100,7 @@ class SubmitVnPayRefund
             return $gatewayAttempt;
         }
 
-        try {
-            $result = $this->transport->send($request);
-        } catch (Throwable) {
-            $result = VnPayRefundResult::ambiguous();
-        }
+        $result = $this->transport->send($request);
 
         return $this->finalize->handle($gatewayAttempt->id, $request, $result);
     }

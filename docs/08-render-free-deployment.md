@@ -75,7 +75,8 @@ Chỉ nhập giá trị thật trong Render Dashboard. Không ghi chúng vào Gi
 | `CLOUDINARY_FOLDER` | Bắt buộc đúng `computer-accessories-store/production`; QA dùng folder riêng ngoài production. |
 | `RUN_MIGRATIONS` | Mặc định `false`; chỉ `true` theo migration plan đã duyệt. |
 | `VNPAY_PAYMENT_URL`, `VNPAY_TERMINAL_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` | VNPay Sandbox hiện có. Return URL phải là URL HTTPS Render cộng `/checkout/vnpay/return`. |
-| `VNPAY_REFUND_URL`, `VNPAY_REFUND_CREATE_BY`, `VNPAY_REFUND_IP_ADDRESS` | Refund Sandbox hiện có, chỉ cấu hình khi demo VNPay/refund. |
+| `VNPAY_REFUND_URL`, `VNPAY_REFUND_CREATE_BY`, `VNPAY_REFUND_IP_ADDRESS` | Bắt buộc khi VNPay được bật. URL phải đúng Refund Sandbox allowlist; `CREATE_BY` là định danh vận hành không chứa khoảng trắng; IP là địa chỉ public hợp lệ mà VNPay chấp nhận. Thiếu hoặc sai cấu hình sẽ chặn nút gửi và không tạo gateway attempt. |
+| `VNPAY_REFUND_CONNECT_TIMEOUT`, `VNPAY_REFUND_TIMEOUT`, `VNPAY_REFUND_SUBMISSION_STALE_SECONDS` | Mặc định lần lượt `5`, `15`, `120` giây. Connect timeout không vượt total timeout; stale lease phải từ 60–3600 giây và lớn hơn total timeout để không cho phép đối soát khi request còn chạy. |
 
 Không lưu nội dung CA trong Git, Docker image, Blueprint hay một environment variable. Trong Render Dashboard, tạo Secret File tên `aiven-ca.pem`; Render mount file tại `/etc/secrets/aiven-ca.pem`, sau đó đặt `MYSQL_ATTR_SSL_CA` thành đúng đường dẫn đó. `app:validate-production` dừng startup nếu CA không đọc được hoặc xác minh chứng thư máy chủ không được bật. Không dựa vào cấu hình `require_secure_transport` phía server để thay thế xác minh TLS phía client.
 

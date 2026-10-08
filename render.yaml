@@ -62,5 +62,29 @@ services:
         sync: false
       - key: CLOUDINARY_FOLDER
         value: computer-accessories-store/production
+      - key: VNPAY_PAYMENT_URL
+        value: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      - key: VNPAY_TERMINAL_CODE
+        sync: false
+      - key: VNPAY_HASH_SECRET
+        sync: false
+      - key: VNPAY_RETURN_URL
+        sync: false
+      - key: VNPAY_VERSION
+        value: 2.1.0
+      - key: VNPAY_TIMEZONE
+        value: Asia/Ho_Chi_Minh
+      - key: VNPAY_REFUND_URL
+        value: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
+      - key: VNPAY_REFUND_CREATE_BY
+        sync: false
+      - key: VNPAY_REFUND_IP_ADDRESS
+        sync: false
+      - key: VNPAY_REFUND_CONNECT_TIMEOUT
+        value: "5"
+      - key: VNPAY_REFUND_TIMEOUT
+        value: "15"
+      - key: VNPAY_REFUND_SUBMISSION_STALE_SECONDS
+        value: "120"
       - key: RUN_MIGRATIONS
         value: "false"

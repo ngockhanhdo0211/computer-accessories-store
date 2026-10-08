@@ -24,7 +24,10 @@ use App\ValueObjects\VnPayRefundResult;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -161,11 +164,11 @@ class VnPayRefundProcessingTest extends TestCase
         app(ReconcileVnPayRefund::class)->handle($refund->fresh(), $admin, (string) Str::uuid(), 'failed', 'Kết quả xung đột');
     }
 
-    public function test_timeout_or_transport_exception_is_ambiguous_without_retry(): void
+    public function test_ambiguous_transport_result_is_not_retried(): void
     {
         [$refund] = $this->pendingRefund();
         $admin = User::factory()->admin()->create();
-        $transport = new FakeRefundTransport(null, true);
+        $transport = new FakeRefundTransport($this->refundResult(RefundGatewayAttemptStatus::Ambiguous, null, null));
         $this->app->instance(VnPayRefundTransport::class, $transport);
 
         $gateway = app(SubmitVnPayRefund::class)->handle($refund, $admin, (string) Str::uuid());
@@ -174,6 +177,115 @@ class VnPayRefundProcessingTest extends TestCase
         $this->assertSame(1, $transport->calls);
         $this->assertSame(RefundGatewayAttemptStatus::Ambiguous, $gateway->status);
         $this->assertSame(RefundStatus::Pending, $refund->fresh()->status);
+    }
+
+    public function test_controller_redirects_safely_when_refund_configuration_is_missing(): void
+    {
+        [$refund] = $this->pendingRefund();
+        $admin = User::factory()->admin()->create();
+        $eventKey = (string) Str::uuid();
+        config()->set('services.vnpay.refund_create_by');
+        Log::spy();
+
+        $this->actingAs($admin)
+            ->from(route('admin.refunds.show', $refund))
+            ->post(route('admin.refunds.submit', $refund), ['event_key' => $eventKey])
+            ->assertRedirect(route('admin.refunds.show', $refund))
+            ->assertSessionHasErrorsIn('submitRefund', ['refund'])
+            ->assertSessionHasInput('event_key', $eventKey);
+
+        $this->assertDatabaseCount('refund_gateway_attempts', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
+        Log::shouldHaveReceived('warning')->withArgs(function (string $message, array $context): bool {
+            $encoded = json_encode($context, JSON_THROW_ON_ERROR);
+
+            return $message === 'VNPay refund configuration prevented submission.'
+                && $context['reason'] === 'configuration_invalid'
+                && ! str_contains($encoded, 'refund-feature-secret');
+        })->once();
+    }
+
+    public function test_controller_turns_transport_failure_into_ambiguous_evidence_without_500_or_retry(): void
+    {
+        [$refund] = $this->pendingRefund();
+        $admin = User::factory()->admin()->create();
+        $calls = 0;
+        Http::fake(function () use (&$calls): never {
+            $calls++;
+
+            throw new ConnectionException('simulated timeout');
+        });
+
+        $this->actingAs($admin)
+            ->post(route('admin.refunds.submit', $refund), ['event_key' => (string) Str::uuid()])
+            ->assertRedirect(route('admin.refunds.show', $refund))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseHas('refund_gateway_attempts', [
+            'refund_id' => $refund->id,
+            'status' => RefundGatewayAttemptStatus::Ambiguous->value,
+        ]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'refund.vnpay.submitted']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'refund.vnpay.ambiguous']);
+        $this->assertSame(1, $calls);
+
+        $this->actingAs($admin)
+            ->post(route('admin.refunds.submit', $refund), ['event_key' => (string) Str::uuid()])
+            ->assertRedirect(route('admin.refunds.show', $refund));
+        $this->assertSame(1, $calls);
+    }
+
+    public function test_detail_hides_submit_when_refund_configuration_is_invalid(): void
+    {
+        [$refund] = $this->pendingRefund();
+        $admin = User::factory()->admin()->create();
+        config()->set('services.vnpay.refund_create_by');
+
+        $this->actingAs($admin)->get(route('admin.refunds.show', $refund))
+            ->assertOk()
+            ->assertSee('Cấu hình hoàn tiền chưa hợp lệ.')
+            ->assertDontSee('data-confirm-action=', false);
+    }
+
+    public function test_success_finalization_rolls_back_each_business_and_audit_boundary(): void
+    {
+        foreach ([
+            ['refunds', 'UPDATE', null],
+            ['payment_attempts', 'UPDATE', null],
+            ['coupon_usages', 'UPDATE', null],
+            ['audit_logs', 'INSERT', "NEW.action = 'refund.vnpay.succeeded'"],
+        ] as $index => [$table, $operation, $when]) {
+            [$refund, $usage] = $this->pendingRefund(true);
+            $admin = User::factory()->admin()->create();
+            $transport = new FakeRefundTransport($this->refundResult(RefundGatewayAttemptStatus::Succeeded, '00', '00'));
+            $this->app->instance(VnPayRefundTransport::class, $transport);
+            $trigger = "test_refund_rollback_{$index}";
+            $condition = $when === null ? '' : " WHEN {$when}";
+            DB::statement("CREATE TRIGGER {$trigger} BEFORE {$operation} ON {$table}{$condition} BEGIN SELECT RAISE(ABORT, 'forced rollback'); END");
+
+            try {
+                app(SubmitVnPayRefund::class)->handle($refund, $admin, (string) Str::uuid());
+                $this->fail("Finalization unexpectedly crossed the {$table} failure boundary.");
+            } catch (QueryException) {
+                $this->assertSame(RefundStatus::Pending, $refund->fresh()->status);
+                $this->assertSame(PaymentStatus::Paid, $refund->paymentAttempt->fresh()->status);
+                $this->assertSame(CouponUsageStatus::Consumed, $usage->fresh()->status);
+                $this->assertDatabaseHas('refund_gateway_attempts', [
+                    'refund_id' => $refund->id,
+                    'status' => RefundGatewayAttemptStatus::Submitted->value,
+                ]);
+                $this->assertDatabaseHas('audit_logs', [
+                    'subject_id' => $refund->id,
+                    'action' => 'refund.vnpay.submitted',
+                ]);
+                $this->assertDatabaseMissing('audit_logs', [
+                    'subject_id' => $refund->id,
+                    'action' => 'refund.vnpay.succeeded',
+                ]);
+            } finally {
+                DB::statement("DROP TRIGGER IF EXISTS {$trigger}");
+            }
+        }
     }
 
     public function test_interrupted_submitted_evidence_can_be_marked_ambiguous_without_an_http_retry(): void
@@ -380,16 +492,11 @@ class FakeRefundTransport implements VnPayRefundTransport
 
     public function __construct(
         private readonly ?VnPayRefundResult $result,
-        private readonly bool $throws = false,
     ) {}
 
     public function send(VnPayRefundRequest $request): VnPayRefundResult
     {
         $this->calls++;
-        if ($this->throws) {
-            throw new \RuntimeException('Simulated transport interruption.');
-        }
-
         if (! $this->result instanceof VnPayRefundResult) {
             throw new LogicException('Fake Refund transport requires a result when it does not throw.');
         }

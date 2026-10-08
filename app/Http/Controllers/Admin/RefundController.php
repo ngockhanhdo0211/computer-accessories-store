@@ -6,13 +6,16 @@ use App\Actions\MarkSubmittedRefundAmbiguous;
 use App\Actions\ReconcileVnPayRefund;
 use App\Actions\SubmitVnPayRefund;
 use App\Enums\RefundGatewayAttemptStatus;
+use App\Exceptions\VnPayRefundConfigurationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MarkRefundAmbiguousRequest;
 use App\Http\Requests\ReconcileRefundRequest;
 use App\Http\Requests\SubmitRefundRequest;
 use App\Models\Refund;
+use App\Services\VnPayRefundGateway;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class RefundController extends Controller
@@ -26,7 +29,7 @@ class RefundController extends Controller
         ]);
     }
 
-    public function show(Refund $refund): View
+    public function show(Refund $refund, VnPayRefundGateway $gateway): View
     {
         $staleSeconds = config('services.vnpay.refund_submission_stale_seconds');
         $requestTimeout = config('services.vnpay.refund_timeout');
@@ -36,6 +39,7 @@ class RefundController extends Controller
         return view('admin.refunds.show', [
             'refund' => $refund->load(['paymentAttempt.user', 'order', 'gatewayAttempt.submitter', 'gatewayAttempt.reconciliationActor']),
             'submissionStaleSeconds' => $hasValidStaleLease ? $staleSeconds : null,
+            'refundGatewayConfigured' => $gateway->configurationIsValid(),
         ]);
     }
 
@@ -46,6 +50,18 @@ class RefundController extends Controller
     ): RedirectResponse {
         try {
             $gatewayAttempt = $submit->handle($refund, $request->user(), $request->validated('event_key'));
+        } catch (VnPayRefundConfigurationException $exception) {
+            Log::warning('VNPay refund configuration prevented submission.', [
+                'operation' => 'vnpay_refund',
+                'reason' => 'configuration_invalid',
+                'refund_id' => $refund->id,
+                'actor_id' => $request->user()->id,
+                'exception_class' => $exception::class,
+            ]);
+
+            return redirect()->route('admin.refunds.show', $refund)
+                ->withErrors(['refund' => 'Chưa thể kết nối dịch vụ hoàn tiền. Yêu cầu chưa được gửi; hãy kiểm tra cấu hình VNPay.'], 'submitRefund')
+                ->withInput($request->safe()->only('event_key'));
         } catch (ValidationException $exception) {
             return redirect()->route('admin.refunds.show', $refund)
                 ->withErrors($exception->errors(), 'submitRefund')

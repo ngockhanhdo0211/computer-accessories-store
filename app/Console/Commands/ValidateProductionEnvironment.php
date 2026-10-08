@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\VnPayRefundGateway;
 use Illuminate\Console\Command;
 
 class ValidateProductionEnvironment extends Command
@@ -106,11 +107,47 @@ class ValidateProductionEnvironment extends Command
         }
 
         foreach ($values as $name => $value) {
-            $valid = $name === 'VNPAY_RETURN_URL'
-                ? $this->validVnPayReturnUrl($value)
-                : $this->present($value);
+            $valid = match ($name) {
+                'VNPAY_TERMINAL_CODE' => is_string($value) && preg_match('/^[A-Za-z0-9]{8}$/D', trim($value)) === 1,
+                'VNPAY_RETURN_URL' => $this->validVnPayReturnUrl($value),
+                default => $this->present($value),
+            };
             $this->expect($invalid, $valid, $name);
         }
+
+        $refundUrl = config('services.vnpay.refund_url');
+        $refundCreateBy = config('services.vnpay.refund_create_by');
+        $refundIpAddress = config('services.vnpay.refund_ip_address');
+        $connectTimeout = config('services.vnpay.refund_connect_timeout');
+        $timeout = config('services.vnpay.refund_timeout');
+        $staleSeconds = config('services.vnpay.refund_submission_stale_seconds');
+
+        $this->expect($invalid, $refundUrl === VnPayRefundGateway::SANDBOX_REFUND_URL, 'VNPAY_REFUND_URL');
+        $this->expect(
+            $invalid,
+            is_string($refundCreateBy) && preg_match('/^[A-Za-z0-9._-]{1,64}$/D', trim($refundCreateBy)) === 1,
+            'VNPAY_REFUND_CREATE_BY',
+        );
+        $this->expect(
+            $invalid,
+            is_string($refundIpAddress)
+                && strlen(trim($refundIpAddress)) <= 45
+                && filter_var(trim($refundIpAddress), FILTER_VALIDATE_IP) !== false,
+            'VNPAY_REFUND_IP_ADDRESS',
+        );
+        $this->expect($invalid, is_int($connectTimeout) && $connectTimeout >= 1 && $connectTimeout <= 30, 'VNPAY_REFUND_CONNECT_TIMEOUT');
+        $this->expect(
+            $invalid,
+            is_int($timeout) && $timeout >= 1 && $timeout <= 30
+                && is_int($connectTimeout) && $connectTimeout <= $timeout,
+            'VNPAY_REFUND_TIMEOUT',
+        );
+        $this->expect(
+            $invalid,
+            is_int($staleSeconds) && $staleSeconds >= 60 && $staleSeconds <= 3600
+                && is_int($timeout) && $staleSeconds > $timeout,
+            'VNPAY_REFUND_SUBMISSION_STALE_SECONDS',
+        );
     }
 
     /** @param array<int, string> $invalid */
