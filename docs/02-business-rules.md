@@ -9,6 +9,7 @@ Các từ khóa trạng thái/mã dưới đây là giá trị nghiệp vụ đ�
 - Mật khẩu luôn hash. Không xóa cứng tài khoản đã phát sinh dữ liệu. Phân quyền kiểm tra tại backend và theo quyền sở hữu dữ liệu; thao tác nhạy cảm lưu audit log.
 - `locked` là khóa tạm, `inactive` là ngừng sử dụng. Cả hai từ chối đăng nhập và thu hồi session. Admin có thể mở `locked`; password reset không tự mở khóa. `inactive` không tự khôi phục, chỉ admin kích hoạt lại.
 - Admin production đầu tiên được bootstrap bằng lệnh Artisan nội bộ `app:promote-customer-to-admin {email}`: chỉ nâng một Customer hiện hữu, `active` thành Admin trong transaction có khóa hàng và audit; không tạo tài khoản/mật khẩu, không hard-code credential và không có endpoint công khai. Lệnh yêu cầu xác nhận rõ trong production và replay chỉ thành công khi audit evidence nhất quán. Factory chỉ phục vụ test.
+- Employee production được bootstrap bằng lệnh Artisan nội bộ `app:promote-customer-to-employee {email}` theo cùng nguyên tắc: chỉ nâng một Customer hiện hữu đang `active`, khóa hàng và ghi audit hệ thống nguyên tử; không tạo hoặc đổi mật khẩu, không có endpoint công khai. Production bắt buộc xác nhận tương tác và replay chỉ hợp lệ khi role cùng đúng một audit evidence nhất quán.
 
 ## Catalog
 

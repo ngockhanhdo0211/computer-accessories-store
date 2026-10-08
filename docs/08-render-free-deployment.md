@@ -179,6 +179,16 @@ php artisan app:promote-customer-to-admin admin-operator@example.com
 
 Email phải thuộc một Customer hiện hữu đang `active`. Đọc kỹ cảnh báo `APP_ENV=production` và chỉ trả lời `yes` sau khi đối chiếu đúng tài khoản/database. Lệnh production chạy với `--no-interaction` sẽ fail-closed và không truy vấn/thay đổi tài khoản; không có option bypass confirmation. Lệnh không tạo hay đổi password, không sửa membership/session và không có HTTP endpoint; thay đổi role cùng audit hệ thống được commit nguyên tử. Chạy lại chỉ trả thành công khi audit evidence của lần bootstrap trước còn nguyên vẹn. Không đặt lệnh này trong Render startup hoặc deploy hook.
 
+### Bootstrap Employee production
+
+Quy trình private environment, TLS/CA và database identity giống hệt Bootstrap Admin. Sau khi xác minh đúng commit deploy và database production đã duyệt, chạy tương tác:
+
+```text
+php artisan app:promote-customer-to-employee employee-operator@example.com
+```
+
+Email phải thuộc Customer hiện hữu đang `active`. Lệnh hiển thị email đã chuẩn hóa và cảnh báo phạm vi quyền Employee trước khi yêu cầu xác nhận `yes`. `--no-interaction` trên production fail-closed trước khi truy vấn User; không có `--force` hoặc option bypass. Lệnh chỉ đổi role thành `employee`, cho phép `updated_at` tiến về thời điểm promote và ghi đúng một audit hệ thống trong cùng transaction; không đổi password, email verification, profile, membership, remember token, last login hay session. Replay chỉ thành công khi role Employee và audit evidence còn nguyên vẹn. Không đặt lệnh trong Render startup hoặc deploy hook.
+
 ## 12. Rollback
 
 - Rollback Render về image/commit trước trong số deployment còn được Render giữ.
